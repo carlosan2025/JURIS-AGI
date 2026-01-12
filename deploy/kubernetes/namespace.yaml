@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: juris-agi
+  labels:
+    app.kubernetes.io/name: juris-agi
+    app.kubernetes.io/component: namespace

@@ -1,0 +1,148 @@
+{{- if .Values.worker.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "juris-agi.fullname" . }}-worker
+  labels:
+    {{- include "juris-agi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "juris-agi.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "juris-agi.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "juris-agi.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.worker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: worker
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.global.imageRegistry }}{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - juris_agi.api.worker
+          envFrom:
+            - configMapRef:
+                name: {{ include "juris-agi.fullname" . }}-config
+          env:
+            {{- range $key, $value := .Values.worker.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          volumeMounts:
+            - name: trace-storage
+              mountPath: {{ .Values.config.traceStoragePath }}
+            - name: model-cache
+              mountPath: /app/models
+      volumes:
+        - name: trace-storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "juris-agi.fullname" . }}-traces
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: model-cache
+          emptyDir: {}
+      {{- with .Values.worker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if .Values.workerCpu.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "juris-agi.fullname" . }}-worker-cpu
+  labels:
+    {{- include "juris-agi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker-cpu
+spec:
+  replicas: {{ .Values.workerCpu.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "juris-agi.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker-cpu
+  template:
+    metadata:
+      labels:
+        {{- include "juris-agi.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker-cpu
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "juris-agi.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.workerCpu.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.workerCpu.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: worker
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.global.imageRegistry }}{{ .Values.workerCpu.image.repository }}:{{ .Values.workerCpu.image.tag }}"
+          imagePullPolicy: {{ .Values.workerCpu.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - juris_agi.api.worker
+          envFrom:
+            - configMapRef:
+                name: {{ include "juris-agi.fullname" . }}-config
+          env:
+            {{- range $key, $value := .Values.workerCpu.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.workerCpu.resources | nindent 12 }}
+          volumeMounts:
+            - name: trace-storage
+              mountPath: {{ .Values.config.traceStoragePath }}
+      volumes:
+        - name: trace-storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "juris-agi.fullname" . }}-traces
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.workerCpu.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

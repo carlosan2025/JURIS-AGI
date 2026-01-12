@@ -1,0 +1,197 @@
+# Default values for juris-agi
+
+# Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# API Server Configuration
+api:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: juris-agi
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  # API-specific environment variables
+  env:
+    JURIS_WORKERS: "4"
+    JURIS_DEBUG: "false"
+    DEVICE: "cpu"
+
+# Worker Configuration (GPU)
+worker:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: juris-agi
+    tag: gpu-latest
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+      nvidia.com/gpu: "1"
+    limits:
+      memory: "8Gi"
+      cpu: "2000m"
+      nvidia.com/gpu: "1"
+
+  nodeSelector: {}
+
+  tolerations:
+    - key: "nvidia.com/gpu"
+      operator: "Exists"
+      effect: "NoSchedule"
+
+  affinity: {}
+
+  # Worker-specific environment variables
+  env:
+    DEVICE: "auto"
+    MAX_CONCURRENT_JOBS: "1"
+
+# Worker Configuration (CPU fallback)
+workerCpu:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: juris-agi
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+  nodeSelector: {}
+  tolerations: []
+
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: nvidia.com/gpu
+                operator: DoesNotExist
+
+  env:
+    DEVICE: "cpu"
+    MAX_CONCURRENT_JOBS: "2"
+
+# Redis Configuration
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+# External Redis (if redis.enabled is false)
+externalRedis:
+  host: ""
+  port: 6379
+  password: ""
+
+# Ingress Configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+  hosts:
+    - host: juris-api.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Common Configuration
+config:
+  # Job settings
+  jobTimeoutSeconds: 600
+  jobTtlSeconds: 3600
+  maxPendingJobs: 1000
+
+  # Queue settings
+  queueNames: "juris_high,juris_default,juris_low"
+
+  # Storage
+  traceStoragePath: "/app/traces"
+
+  # S3 storage (optional)
+  s3:
+    enabled: false
+    bucket: ""
+    endpoint: ""
+    accessKey: ""
+    secretKey: ""
+
+  # Model paths (optional, for pre-trained models)
+  sketcherModelPath: ""
+  criticModelPath: ""
+
+# Persistence for traces
+persistence:
+  enabled: false
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod Security
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000

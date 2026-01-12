@@ -34,6 +34,8 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.24.0",
     "black>=23.0",
     "ruff>=0.1.0",
     "mypy>=1.0",
@@ -41,9 +43,23 @@ dev = [
 neural = [
     "torch>=2.0",
 ]
+api = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.22.0",
+    "pydantic>=2.0",
+    "redis>=4.5.0",
+    "rq>=1.15.0",
+    "boto3>=1.28.0",
+    "httpx>=0.24.0",
+]
+all = [
+    "juris-agi[dev,neural,api]",
+]
 
 [project.scripts]
 juris-arc = "juris_agi.eval.run_arc:main"
+juris-api = "juris_agi.api.server:main"
+juris-worker = "juris_agi.api.worker:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

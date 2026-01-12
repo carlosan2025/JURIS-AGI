@@ -1,0 +1,27 @@
+apiVersion: v2
+name: juris-agi
+description: Neuro-symbolic system for ARC-style abstract reasoning
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+keywords:
+  - arc
+  - reasoning
+  - neuro-symbolic
+  - machine-learning
+  - program-synthesis
+
+home: https://github.com/carlosan2025/JURIS-AGI
+sources:
+  - https://github.com/carlosan2025/JURIS-AGI
+
+maintainers:
+  - name: JURIS-AGI Team
+    email: maintainer@example.com
+
+dependencies:
+  - name: redis
+    version: "~18.0"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

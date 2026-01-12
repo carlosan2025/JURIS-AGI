@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: juris-config
+  namespace: juris-agi
+  labels:
+    app.kubernetes.io/name: juris-agi
+    app.kubernetes.io/component: config
+data:
+  # API Configuration
+  JURIS_HOST: "0.0.0.0"
+  JURIS_PORT: "8000"
+  JURIS_WORKERS: "4"
+  JURIS_DEBUG: "false"
+
+  # Redis Configuration
+  REDIS_URL: "redis://juris-redis:6379/0"
+  REDIS_MAX_CONNECTIONS: "10"
+
+  # Job Configuration
+  JOB_TIMEOUT_SECONDS: "600"
+  JOB_TTL_SECONDS: "3600"
+  MAX_PENDING_JOBS: "1000"
+
+  # Queue Configuration
+  QUEUE_NAMES: "juris_high,juris_default,juris_low"
+  MAX_CONCURRENT_JOBS: "1"
+
+  # Storage Configuration
+  TRACE_STORAGE_PATH: "/app/traces"
+
+  # Device Configuration (auto-detect GPU)
+  DEVICE: "auto"

@@ -1,0 +1,118 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: juris-worker
+  namespace: juris-agi
+  labels:
+    app.kubernetes.io/name: juris-agi
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: juris-agi
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: juris-agi
+        app.kubernetes.io/component: worker
+    spec:
+      # Tolerate GPU nodes
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: worker
+          image: juris-agi:gpu
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - juris_agi.api.worker
+          envFrom:
+            - configMapRef:
+                name: juris-config
+          env:
+            - name: DEVICE
+              value: "auto"
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+              nvidia.com/gpu: "1"
+            limits:
+              memory: "8Gi"
+              cpu: "2000m"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: trace-storage
+              mountPath: /app/traces
+            - name: model-cache
+              mountPath: /app/models
+      volumes:
+        - name: trace-storage
+          emptyDir: {}
+        - name: model-cache
+          emptyDir: {}
+
+---
+# Worker without GPU (CPU-only fallback)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: juris-worker-cpu
+  namespace: juris-agi
+  labels:
+    app.kubernetes.io/name: juris-agi
+    app.kubernetes.io/component: worker-cpu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: juris-agi
+      app.kubernetes.io/component: worker-cpu
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: juris-agi
+        app.kubernetes.io/component: worker-cpu
+    spec:
+      # Prefer nodes without GPU
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: nvidia.com/gpu
+                    operator: DoesNotExist
+      containers:
+        - name: worker
+          image: juris-agi:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - juris_agi.api.worker
+          envFrom:
+            - configMapRef:
+                name: juris-config
+          env:
+            - name: DEVICE
+              value: "cpu"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          volumeMounts:
+            - name: trace-storage
+              mountPath: /app/traces
+      volumes:
+        - name: trace-storage
+          emptyDir: {}

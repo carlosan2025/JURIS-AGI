@@ -1,0 +1,161 @@
+# JURIS-AGI Docker Compose Configuration
+# Local development and testing setup
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # Redis - Job queue and state storage
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: juris-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # API Server (CPU)
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: juris-api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - JURIS_HOST=0.0.0.0
+      - JURIS_PORT=8000
+      - JURIS_WORKERS=4
+      - JURIS_DEBUG=false
+      - TRACE_STORAGE_PATH=/app/traces
+      - DEVICE=cpu
+    volumes:
+      - trace-data:/app/traces
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Worker (CPU) - for development/testing without GPU
+  # ==========================================================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cpu
+    container_name: juris-worker
+    command: python -m juris_agi.api.worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - QUEUE_NAMES=juris_high,juris_default,juris_low
+      - MAX_CONCURRENT_JOBS=1
+      - JOB_TIMEOUT_SECONDS=600
+      - TRACE_STORAGE_PATH=/app/traces
+      - DEVICE=cpu
+    volumes:
+      - trace-data:/app/traces
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Worker (GPU) - for production with NVIDIA GPU
+  # Uncomment and use instead of 'worker' service when GPU is available
+  # ==========================================================================
+  # worker-gpu:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: worker
+  #   container_name: juris-worker-gpu
+  #   command: python -m juris_agi.api.worker
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - QUEUE_NAMES=juris_high,juris_default,juris_low
+  #     - MAX_CONCURRENT_JOBS=1
+  #     - JOB_TIMEOUT_SECONDS=600
+  #     - TRACE_STORAGE_PATH=/app/traces
+  #     - DEVICE=auto
+  #   volumes:
+  #     - trace-data:/app/traces
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   restart: unless-stopped
+
+  # ==========================================================================
+  # MinIO - S3-compatible storage for traces (optional)
+  # ==========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: juris-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    profiles:
+      - storage
+
+  # ==========================================================================
+  # Create MinIO bucket on startup
+  # ==========================================================================
+  minio-setup:
+    image: minio/mc:latest
+    container_name: juris-minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/juris-traces --ignore-existing;
+      mc anonymous set download myminio/juris-traces;
+      exit 0;
+      "
+    profiles:
+      - storage
+
+volumes:
+  redis-data:
+  trace-data:
+  minio-data:
+
+networks:
+  default:
+    name: juris-network

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "juris-agi.fullname" . }}-config
+  labels:
+    {{- include "juris-agi.labels" . | nindent 4 }}
+data:
+  REDIS_URL: {{ include "juris-agi.redisUrl" . | quote }}
+  JOB_TIMEOUT_SECONDS: {{ .Values.config.jobTimeoutSeconds | quote }}
+  JOB_TTL_SECONDS: {{ .Values.config.jobTtlSeconds | quote }}
+  MAX_PENDING_JOBS: {{ .Values.config.maxPendingJobs | quote }}
+  QUEUE_NAMES: {{ .Values.config.queueNames | quote }}
+  TRACE_STORAGE_PATH: {{ .Values.config.traceStoragePath | quote }}
+  {{- if .Values.config.sketcherModelPath }}
+  SKETCHER_MODEL_PATH: {{ .Values.config.sketcherModelPath | quote }}
+  {{- end }}
+  {{- if .Values.config.criticModelPath }}
+  CRITIC_MODEL_PATH: {{ .Values.config.criticModelPath | quote }}
+  {{- end }}
+  {{- if .Values.config.s3.enabled }}
+  S3_BUCKET: {{ .Values.config.s3.bucket | quote }}
+  S3_ENDPOINT: {{ .Values.config.s3.endpoint | quote }}
+  {{- end }}
