@@ -22,6 +22,19 @@ from .metrics import (
     score_solution,
 )
 from .trace import SolveTrace, TraceEntry, TraceWriter, TraceContext
+from .storage import (
+    StorageConfig,
+    StorageBackend,
+    LocalStorageBackend,
+    S3StorageBackend,
+    StorageClient,
+    ArtifactMetadata,
+)
+from .model_registry import (
+    ModelRegistry,
+    ModelEntry,
+    ModelVersion,
+)
 
 __all__ = [
     # Types
@@ -51,4 +64,15 @@ __all__ = [
     "TraceEntry",
     "TraceWriter",
     "TraceContext",
+    # Storage
+    "StorageConfig",
+    "StorageBackend",
+    "LocalStorageBackend",
+    "S3StorageBackend",
+    "StorageClient",
+    "ArtifactMetadata",
+    # Model Registry
+    "ModelRegistry",
+    "ModelEntry",
+    "ModelVersion",
 ]

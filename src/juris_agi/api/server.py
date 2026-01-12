@@ -320,6 +320,7 @@ async def get_job_result(
         synthesis_iterations=job_data.get("synthesis_iterations"),
         error_message=job_data.get("error_message"),
         trace_url=job_data.get("trace_url"),
+        result_url=job_data.get("result_url"),
     )
 
     # Add predictions

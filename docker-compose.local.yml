@@ -1,0 +1,126 @@
+# JURIS-AGI Local PoC Docker Compose
+#
+# Run with: docker compose -f docker-compose.local.yml up
+#
+# This provides a fully local, CPU-only setup with:
+# - FastAPI server
+# - Redis (for async job queue)
+# - Worker (CPU-only)
+# - Local filesystem storage
+#
+# No cloud dependencies, no GPU requirements.
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # Redis - Job queue (local)
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: juris-local-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-local-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # API Server (Local PoC)
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cpu
+    container_name: juris-local-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Local PoC mode
+      - LOCAL_POC=true
+      - SYNC_MODE=false
+      - REDIS_ENABLED=true
+      - GPU_ENABLED=false
+
+      # Storage
+      - STORAGE_BACKEND=local
+      - RUNS_DIR=/app/runs
+
+      # Redis
+      - REDIS_URL=redis://redis:6379/0
+
+      # Server
+      - JURIS_HOST=0.0.0.0
+      - JURIS_PORT=8000
+      - JURIS_DEBUG=false
+
+      # Safety limits
+      - MAX_GRID_SIZE=30
+      - MAX_SEARCH_EXPANSIONS=500
+      - MAX_RUNTIME_SECONDS=60
+      - MAX_PROGRAM_DEPTH=4
+    volumes:
+      - ./runs:/app/runs
+      - ./models:/app/models:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python -m juris_agi.api.local_server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Worker (CPU-only)
+  # ==========================================================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cpu
+    container_name: juris-local-worker
+    environment:
+      # Local PoC mode
+      - LOCAL_POC=true
+      - GPU_ENABLED=false
+      - DEVICE=cpu
+
+      # Storage
+      - STORAGE_BACKEND=local
+      - STORAGE_LOCAL_PATH=/app/runs
+
+      # Redis
+      - REDIS_URL=redis://redis:6379/0
+      - QUEUE_NAMES=juris_default
+
+      # Limits
+      - MAX_CONCURRENT_JOBS=1
+      - JOB_TIMEOUT_SECONDS=120
+
+      # Model registry
+      - MODEL_REGISTRY_PATH=/app/models/registry.json
+    volumes:
+      - ./runs:/app/runs
+      - ./models:/app/models:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python -m juris_agi.api.worker
+    restart: unless-stopped
+
+volumes:
+  redis-local-data:
+
+networks:
+  default:
+    name: juris-local-network

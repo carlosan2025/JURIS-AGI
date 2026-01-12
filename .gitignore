@@ -77,11 +77,12 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Models (large files)
-models/
+# Model files (large)
 *.pt
 *.pth
 *.onnx
+# Keep registry.json but ignore actual model weights
+models/**/model.pt
 
 # Data (may be large)
 data/arc_public/
@@ -93,3 +94,8 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Local PoC runs (traces and results)
+runs/traces/
+runs/results/
+!runs/.gitkeep

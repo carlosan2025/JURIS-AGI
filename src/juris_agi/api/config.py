@@ -24,13 +24,19 @@ class APIConfig:
     max_pending_jobs: int = 1000
 
     # Storage
-    trace_storage_path: str = "/tmp/juris_traces"
+    storage_backend: str = "local"  # "local" or "s3"
+    storage_local_path: str = "/tmp/juris_storage"
     s3_bucket: Optional[str] = None
     s3_endpoint: Optional[str] = None
+    s3_region: Optional[str] = None
     s3_access_key: Optional[str] = None
     s3_secret_key: Optional[str] = None
+    presigned_url_expiry: int = 3600  # 1 hour
 
-    # Model paths
+    # Model registry
+    model_registry_path: str = "models/registry.json"
+
+    # Model paths (deprecated, use registry)
     sketcher_model_path: Optional[str] = None
     critic_model_path: Optional[str] = None
 
@@ -47,11 +53,15 @@ class APIConfig:
             job_timeout_seconds=int(os.getenv("JOB_TIMEOUT_SECONDS", "600")),
             job_ttl_seconds=int(os.getenv("JOB_TTL_SECONDS", "3600")),
             max_pending_jobs=int(os.getenv("MAX_PENDING_JOBS", "1000")),
-            trace_storage_path=os.getenv("TRACE_STORAGE_PATH", "/tmp/juris_traces"),
+            storage_backend=os.getenv("STORAGE_BACKEND", "local"),
+            storage_local_path=os.getenv("STORAGE_LOCAL_PATH", "/tmp/juris_storage"),
             s3_bucket=os.getenv("S3_BUCKET"),
             s3_endpoint=os.getenv("S3_ENDPOINT"),
+            s3_region=os.getenv("S3_REGION", "us-east-1"),
             s3_access_key=os.getenv("S3_ACCESS_KEY"),
             s3_secret_key=os.getenv("S3_SECRET_KEY"),
+            presigned_url_expiry=int(os.getenv("PRESIGNED_URL_EXPIRY", "3600")),
+            model_registry_path=os.getenv("MODEL_REGISTRY_PATH", "models/registry.json"),
             sketcher_model_path=os.getenv("SKETCHER_MODEL_PATH"),
             critic_model_path=os.getenv("CRITIC_MODEL_PATH"),
         )
@@ -74,13 +84,19 @@ class WorkerConfig:
     health_check_interval: int = 30
 
     # Storage
-    trace_storage_path: str = "/tmp/juris_traces"
+    storage_backend: str = "local"  # "local" or "s3"
+    storage_local_path: str = "/tmp/juris_storage"
     s3_bucket: Optional[str] = None
     s3_endpoint: Optional[str] = None
+    s3_region: Optional[str] = None
     s3_access_key: Optional[str] = None
     s3_secret_key: Optional[str] = None
+    presigned_url_expiry: int = 3600
 
-    # Model paths
+    # Model registry
+    model_registry_path: str = "models/registry.json"
+
+    # Model paths (deprecated, use registry)
     sketcher_model_path: Optional[str] = None
     critic_model_path: Optional[str] = None
 
@@ -98,11 +114,15 @@ class WorkerConfig:
             max_concurrent_jobs=int(os.getenv("MAX_CONCURRENT_JOBS", "1")),
             job_timeout_seconds=int(os.getenv("JOB_TIMEOUT_SECONDS", "600")),
             health_check_interval=int(os.getenv("HEALTH_CHECK_INTERVAL", "30")),
-            trace_storage_path=os.getenv("TRACE_STORAGE_PATH", "/tmp/juris_traces"),
+            storage_backend=os.getenv("STORAGE_BACKEND", "local"),
+            storage_local_path=os.getenv("STORAGE_LOCAL_PATH", "/tmp/juris_storage"),
             s3_bucket=os.getenv("S3_BUCKET"),
             s3_endpoint=os.getenv("S3_ENDPOINT"),
+            s3_region=os.getenv("S3_REGION", "us-east-1"),
             s3_access_key=os.getenv("S3_ACCESS_KEY"),
             s3_secret_key=os.getenv("S3_SECRET_KEY"),
+            presigned_url_expiry=int(os.getenv("PRESIGNED_URL_EXPIRY", "3600")),
+            model_registry_path=os.getenv("MODEL_REGISTRY_PATH", "models/registry.json"),
             sketcher_model_path=os.getenv("SKETCHER_MODEL_PATH"),
             critic_model_path=os.getenv("CRITIC_MODEL_PATH"),
             device=os.getenv("DEVICE", "auto"),

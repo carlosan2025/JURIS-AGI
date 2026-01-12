@@ -149,8 +149,9 @@ class JobResult(BaseModel):
     # Error info
     error_message: Optional[str] = None
 
-    # Trace
+    # Artifacts
     trace_url: Optional[str] = Field(default=None, description="URL to full execution trace")
+    result_url: Optional[str] = Field(default=None, description="URL to result JSON artifact")
     trace_data: Optional[Dict[str, Any]] = Field(default=None, description="Inline trace data")
 
     class Config:

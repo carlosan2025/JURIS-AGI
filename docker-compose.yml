@@ -39,10 +39,13 @@ services:
       - JURIS_PORT=8000
       - JURIS_WORKERS=4
       - JURIS_DEBUG=false
-      - TRACE_STORAGE_PATH=/app/traces
+      - STORAGE_BACKEND=local
+      - STORAGE_LOCAL_PATH=/app/storage
+      - MODEL_REGISTRY_PATH=/app/models/registry.json
       - DEVICE=cpu
     volumes:
-      - trace-data:/app/traces
+      - storage-data:/app/storage
+      - ./models:/app/models:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -68,10 +71,13 @@ services:
       - QUEUE_NAMES=juris_high,juris_default,juris_low
       - MAX_CONCURRENT_JOBS=1
       - JOB_TIMEOUT_SECONDS=600
-      - TRACE_STORAGE_PATH=/app/traces
+      - STORAGE_BACKEND=local
+      - STORAGE_LOCAL_PATH=/app/storage
+      - MODEL_REGISTRY_PATH=/app/models/registry.json
       - DEVICE=cpu
     volumes:
-      - trace-data:/app/traces
+      - storage-data:/app/storage
+      - ./models:/app/models:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -93,10 +99,13 @@ services:
   #     - QUEUE_NAMES=juris_high,juris_default,juris_low
   #     - MAX_CONCURRENT_JOBS=1
   #     - JOB_TIMEOUT_SECONDS=600
-  #     - TRACE_STORAGE_PATH=/app/traces
+  #     - STORAGE_BACKEND=local
+  #     - STORAGE_LOCAL_PATH=/app/storage
+  #     - MODEL_REGISTRY_PATH=/app/models/registry.json
   #     - DEVICE=auto
   #   volumes:
-  #     - trace-data:/app/traces
+  #     - storage-data:/app/storage
+  #     - ./models:/app/models:ro
   #   depends_on:
   #     redis:
   #       condition: service_healthy
@@ -110,7 +119,8 @@ services:
   #   restart: unless-stopped
 
   # ==========================================================================
-  # MinIO - S3-compatible storage for traces (optional)
+  # MinIO - S3-compatible storage for artifacts (optional)
+  # Enable with: docker compose --profile storage up
   # ==========================================================================
   minio:
     image: minio/minio:latest
@@ -144,16 +154,93 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      mc mb myminio/juris-traces --ignore-existing;
-      mc anonymous set download myminio/juris-traces;
+      mc mb myminio/juris-storage --ignore-existing;
+      mc anonymous set download myminio/juris-storage/results;
       exit 0;
       "
     profiles:
       - storage
 
+  # ==========================================================================
+  # API Server with S3 storage (for use with MinIO)
+  # Enable with: docker compose --profile storage up
+  # ==========================================================================
+  api-s3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: juris-api-s3
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - JURIS_HOST=0.0.0.0
+      - JURIS_PORT=8000
+      - JURIS_WORKERS=4
+      - JURIS_DEBUG=false
+      - STORAGE_BACKEND=s3
+      - S3_BUCKET=juris-storage
+      - S3_ENDPOINT=http://minio:9000
+      - S3_REGION=us-east-1
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - PRESIGNED_URL_EXPIRY=3600
+      - MODEL_REGISTRY_PATH=/app/models/registry.json
+      - DEVICE=cpu
+    volumes:
+      - ./models:/app/models:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - storage
+
+  # ==========================================================================
+  # Worker with S3 storage (for use with MinIO)
+  # Enable with: docker compose --profile storage up
+  # ==========================================================================
+  worker-s3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cpu
+    container_name: juris-worker-s3
+    command: python -m juris_agi.api.worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - QUEUE_NAMES=juris_high,juris_default,juris_low
+      - MAX_CONCURRENT_JOBS=1
+      - JOB_TIMEOUT_SECONDS=600
+      - STORAGE_BACKEND=s3
+      - S3_BUCKET=juris-storage
+      - S3_ENDPOINT=http://minio:9000
+      - S3_REGION=us-east-1
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - PRESIGNED_URL_EXPIRY=3600
+      - MODEL_REGISTRY_PATH=/app/models/registry.json
+      - DEVICE=cpu
+    volumes:
+      - ./models:/app/models:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    profiles:
+      - storage
+
 volumes:
   redis-data:
-  trace-data:
+  storage-data:
   minio-data:
 
 networks:

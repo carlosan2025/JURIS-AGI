@@ -5,7 +5,7 @@ The worker:
 - Pulls jobs from Redis queues (via RQ)
 - Loads model weights once at startup
 - Runs the solver with budget limits
-- Writes results and trace to storage
+- Writes results and trace to storage (local or S3)
 - Updates Redis job state
 """
 
@@ -21,6 +21,8 @@ from typing import Optional, Dict, Any
 
 from .config import WorkerConfig
 from .models import JobStatus
+from ..core.storage import StorageClient, StorageConfig
+from ..core.model_registry import ModelRegistry
 
 # Optional imports
 try:
@@ -41,14 +43,6 @@ except ImportError:
     TORCH_AVAILABLE = False
     torch = None
 
-try:
-    import boto3
-    from botocore.client import Config as BotoConfig
-    S3_AVAILABLE = True
-except ImportError:
-    S3_AVAILABLE = False
-    boto3 = None
-
 # Logger
 logging.basicConfig(
     level=logging.INFO,
@@ -67,7 +61,8 @@ class JurisWorker:
     def __init__(self, config: Optional[WorkerConfig] = None):
         self.config = config or WorkerConfig.from_env()
         self.redis_client: Optional["redis.Redis"] = None
-        self.s3_client = None
+        self.storage_client: Optional[StorageClient] = None
+        self.model_registry: Optional[ModelRegistry] = None
         self.device = None
         self.sketcher = None
         self.critic = None
@@ -101,22 +96,25 @@ class JurisWorker:
                 logger.error(f"Failed to connect to Redis: {e}")
                 raise
 
-        # Setup S3 client if configured
-        if S3_AVAILABLE and self.config.s3_bucket:
-            try:
-                self.s3_client = boto3.client(
-                    "s3",
-                    endpoint_url=self.config.s3_endpoint,
-                    aws_access_key_id=self.config.s3_access_key,
-                    aws_secret_access_key=self.config.s3_secret_key,
-                    config=BotoConfig(signature_version="s3v4"),
-                )
-                logger.info(f"S3 client configured for bucket: {self.config.s3_bucket}")
-            except Exception as e:
-                logger.warning(f"Failed to setup S3 client: {e}")
+        # Setup storage client
+        storage_config = StorageConfig(
+            backend=self.config.storage_backend,
+            local_path=self.config.storage_local_path,
+            s3_bucket=self.config.s3_bucket,
+            s3_endpoint=self.config.s3_endpoint,
+            s3_region=self.config.s3_region,
+            s3_access_key=self.config.s3_access_key,
+            s3_secret_key=self.config.s3_secret_key,
+        )
+        self.storage_client = StorageClient(storage_config)
+        logger.info(f"Storage client configured: {self.config.storage_backend}")
 
-        # Create trace storage directory
-        os.makedirs(self.config.trace_storage_path, exist_ok=True)
+        # Setup model registry
+        self.model_registry = ModelRegistry(
+            registry_path=self.config.model_registry_path,
+            storage_client=self.storage_client,
+        )
+        logger.info(f"Model registry loaded: {len(self.model_registry.list_models())} models")
 
         # Load models
         self._load_models()
@@ -268,10 +266,14 @@ class JurisWorker:
                     })
                 job_data["predictions"] = predictions
 
-                # Save trace if requested
+                # Save trace and result artifacts
                 if job_data.get("return_trace"):
-                    trace_url = self._save_trace(job_id, result.audit_trace)
+                    trace_url = self._save_trace(job_id, job_data["task_id"], result.audit_trace)
                     job_data["trace_url"] = trace_url
+
+                # Save result artifact
+                result_url = self._save_result(job_id, job_data["task_id"], job_data)
+                job_data["result_url"] = result_url
             else:
                 job_data["error_message"] = result.error_message
 
@@ -322,39 +324,86 @@ class JurisWorker:
                 json.dumps(job_data),
             )
 
-    def _save_trace(self, job_id: str, trace) -> Optional[str]:
-        """Save execution trace to storage."""
+    def _save_trace(self, job_id: str, task_id: str, trace) -> Optional[str]:
+        """Save execution trace to storage using StorageClient."""
+        if not self.storage_client:
+            logger.warning("No storage client available")
+            return None
+
         try:
             trace_data = trace.to_dict()
-            trace_filename = f"{job_id}_trace.json"
+            metadata = {
+                "job_id": job_id,
+                "task_id": task_id,
+                "type": "trace",
+            }
 
-            # Save locally
-            local_path = Path(self.config.trace_storage_path) / trace_filename
-            with open(local_path, "w") as f:
-                json.dump(trace_data, f, indent=2, default=str)
+            # Save trace using storage client
+            trace_key = self.storage_client.save_trace(
+                job_id=job_id,
+                task_id=task_id,
+                trace_data=trace_data,
+                metadata=metadata,
+            )
 
-            # Upload to S3 if configured
-            if self.s3_client and self.config.s3_bucket:
-                s3_key = f"traces/{trace_filename}"
-                self.s3_client.upload_file(
-                    str(local_path),
-                    self.config.s3_bucket,
-                    s3_key,
-                )
-
-                # Generate presigned URL
-                url = self.s3_client.generate_presigned_url(
-                    "get_object",
-                    Params={"Bucket": self.config.s3_bucket, "Key": s3_key},
-                    ExpiresIn=3600,
-                )
-                return url
-
-            # Return local path as file:// URL
-            return f"file://{local_path}"
+            # Get URL for the trace
+            url = self.storage_client.get_trace_url(
+                trace_key,
+                expiry_seconds=self.config.presigned_url_expiry,
+            )
+            return url
 
         except Exception as e:
             logger.warning(f"Failed to save trace: {e}")
+            return None
+
+    def _save_result(self, job_id: str, task_id: str, job_data: Dict[str, Any]) -> Optional[str]:
+        """Save job result to storage using StorageClient."""
+        if not self.storage_client:
+            logger.warning("No storage client available")
+            return None
+
+        try:
+            # Build result data (subset of job_data for artifact)
+            result_data = {
+                "job_id": job_id,
+                "task_id": task_id,
+                "status": job_data.get("status"),
+                "success": job_data.get("success"),
+                "predictions": job_data.get("predictions", []),
+                "program": job_data.get("program"),
+                "robustness_score": job_data.get("robustness_score"),
+                "regime": job_data.get("regime"),
+                "synthesis_iterations": job_data.get("synthesis_iterations"),
+                "runtime_seconds": job_data.get("runtime_seconds"),
+                "created_at": job_data.get("created_at"),
+                "completed_at": job_data.get("completed_at"),
+            }
+
+            metadata = {
+                "job_id": job_id,
+                "task_id": task_id,
+                "type": "result",
+                "success": str(job_data.get("success", False)),
+            }
+
+            # Save result using storage client
+            result_key = self.storage_client.save_result(
+                job_id=job_id,
+                task_id=task_id,
+                result_data=result_data,
+                metadata=metadata,
+            )
+
+            # Get URL for the result
+            url = self.storage_client.get_result_url(
+                result_key,
+                expiry_seconds=self.config.presigned_url_expiry,
+            )
+            return url
+
+        except Exception as e:
+            logger.warning(f"Failed to save result: {e}")
             return None
 
 

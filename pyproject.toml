@@ -43,14 +43,17 @@ dev = [
 neural = [
     "torch>=2.0",
 ]
-api = [
+local = [
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.22.0",
     "pydantic>=2.0",
+    "httpx>=0.24.0",
+]
+api = [
+    "juris-agi[local]",
     "redis>=4.5.0",
     "rq>=1.15.0",
     "boto3>=1.28.0",
-    "httpx>=0.24.0",
 ]
 all = [
     "juris-agi[dev,neural,api]",
@@ -60,6 +63,7 @@ all = [
 juris-arc = "juris_agi.eval.run_arc:main"
 juris-api = "juris_agi.api.server:main"
 juris-worker = "juris_agi.api.worker:main"
+juris-local = "juris_agi.api.local_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

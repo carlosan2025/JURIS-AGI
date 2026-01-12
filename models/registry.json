@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "updated_at": "2025-01-12T00:00:00.000000",
+  "models": {
+    "sketcher-base": {
+      "name": "sketcher-base",
+      "model_type": "sketcher",
+      "description": "Base sketcher model for ARC grid transformations",
+      "versions": {
+        "v1.0.0": {
+          "version": "v1.0.0",
+          "path": "models/sketcher/v1.0.0/model.pt",
+          "created_at": "2025-01-12T00:00:00.000000",
+          "description": "Initial release - trained on ARC training set",
+          "metrics": {
+            "accuracy": 0.75,
+            "loss": 0.25
+          },
+          "config": {
+            "hidden_dim": 256,
+            "num_layers": 4,
+            "max_grid_size": 30
+          },
+          "is_default": true,
+          "tags": ["production", "stable"]
+        }
+      },
+      "default_version": "v1.0.0"
+    },
+    "critic-base": {
+      "name": "critic-base",
+      "model_type": "critic",
+      "description": "Base critic model for solution evaluation",
+      "versions": {
+        "v1.0.0": {
+          "version": "v1.0.0",
+          "path": "models/critic/v1.0.0/model.pt",
+          "created_at": "2025-01-12T00:00:00.000000",
+          "description": "Initial release - trained on ARC training set",
+          "metrics": {
+            "accuracy": 0.82,
+            "precision": 0.85,
+            "recall": 0.79
+          },
+          "config": {
+            "hidden_dim": 128,
+            "num_layers": 3
+          },
+          "is_default": true,
+          "tags": ["production", "stable"]
+        }
+      },
+      "default_version": "v1.0.0"
+    }
+  }
+}
