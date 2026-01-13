@@ -174,6 +174,21 @@ from .timeseries import (
     filter_outliers,
 )
 
+# Multi-Hypothesis
+from .hypothesis import (
+    HistoricalDecision,
+    DecisionDataset,
+    CoverageResult,
+    CoverageStats,
+    ExceptionCase,
+    MDLScoreBreakdown,
+    MDLScorer,
+    PolicyHypothesis,
+    HypothesisSetConfig,
+    HypothesisSet,
+    MultiHypothesisEngine,
+)
+
 __all__ = [
     # Results
     "EvalResult",
@@ -276,4 +291,16 @@ __all__ = [
     "extract_all_timeseries_features",
     "interpolate_missing",
     "filter_outliers",
+    # Multi-Hypothesis
+    "HistoricalDecision",
+    "DecisionDataset",
+    "CoverageResult",
+    "CoverageStats",
+    "ExceptionCase",
+    "MDLScoreBreakdown",
+    "MDLScorer",
+    "PolicyHypothesis",
+    "HypothesisSetConfig",
+    "HypothesisSet",
+    "MultiHypothesisEngine",
 ]
