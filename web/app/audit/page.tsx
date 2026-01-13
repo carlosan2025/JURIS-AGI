@@ -18,29 +18,53 @@ import {
   RefreshCw,
   Download,
   ExternalLink,
+  Lightbulb,
+  HelpCircle,
+  Target,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import type { AnalysisResult, CriticalClaim, CounterfactualExplanation } from "@/types/analysis";
+import type {
+  AnalysisResult,
+  CriticalClaim,
+  CounterfactualExplanation,
+} from "@/types/analysis";
 import type { EvidenceGraph } from "@/types/evidence";
 import { Disclaimer } from "@/components/Disclaimer";
-import { simulateReportHTML } from "@/lib/api";
+import { simulateReportHTML, type VCJobResult, type PolicyVariant } from "@/lib/api";
 
 export default function AuditPage() {
   const router = useRouter();
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [vcResult, setVcResult] = useState<VCJobResult | null>(null);
   const [evidenceGraph, setEvidenceGraph] = useState<EvidenceGraph | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportHTML, setReportHTML] = useState<string | null>(null);
+  const [selectedPolicyIndex, setSelectedPolicyIndex] = useState(0);
 
   useEffect(() => {
+    // Load legacy analysis result
     const stored = sessionStorage.getItem("analysisResult");
     if (stored) {
       setResult(JSON.parse(stored));
     }
+
+    // Load new VC job result
+    const vcStored = sessionStorage.getItem("vcJobResult");
+    if (vcStored) {
+      setVcResult(JSON.parse(vcStored));
+    }
+
     const storedGraph = sessionStorage.getItem("evidenceGraph");
     if (storedGraph) {
       setEvidenceGraph(JSON.parse(storedGraph));
@@ -62,7 +86,7 @@ export default function AuditPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `decision-report-${result?.company_id || "report"}.${format === "pdf" ? "html" : format}`;
+    a.download = `decision-report-${result?.company_id || vcResult?.job_id || "report"}.${format === "pdf" ? "html" : format}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -76,15 +100,34 @@ export default function AuditPage() {
     window.open(url, "_blank");
   };
 
+  // If we have VC result, show the new enhanced audit page
+  if (vcResult && vcResult.decision) {
+    return (
+      <EnhancedAuditPage
+        vcResult={vcResult}
+        evidenceGraph={evidenceGraph}
+        selectedPolicyIndex={selectedPolicyIndex}
+        setSelectedPolicyIndex={setSelectedPolicyIndex}
+        router={router}
+      />
+    );
+  }
+
+  // Legacy audit page for old analysis results
   if (!result) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">No Analysis Result</h2>
-        <p className="text-muted-foreground mb-4">
-          Please run an analysis first.
-        </p>
-        <Button onClick={() => router.push("/analyze")}>Go to Analysis</Button>
+        <p className="text-muted-foreground mb-4">Please run an analysis first.</p>
+        <div className="flex gap-2">
+          <Button onClick={() => router.push("/reasoning")}>
+            Go to VC Reasoning
+          </Button>
+          <Button variant="outline" onClick={() => router.push("/analyze")}>
+            Go to Legacy Analysis
+          </Button>
+        </div>
       </div>
     );
   }
@@ -122,7 +165,11 @@ export default function AuditPage() {
                   <ExternalLink className="h-4 w-4 mr-1" />
                   Open in Tab
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => downloadReport("html")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadReport("html")}
+                >
                   <Download className="h-4 w-4 mr-1" />
                   Download HTML
                 </Button>
@@ -234,19 +281,26 @@ export default function AuditPage() {
               <div className="p-4 rounded-lg bg-muted/30 border">
                 <h4 className="font-medium mb-3">Decision Logic</h4>
                 <div className="space-y-2 text-sm">
-                  <p>The decision engine evaluated the evidence graph using the following criteria:</p>
+                  <p>
+                    The decision engine evaluated the evidence graph using the
+                    following criteria:
+                  </p>
                   <ul className="list-disc list-inside space-y-1 ml-2 mt-2">
                     <li>
-                      <span className="font-medium">Net Signal Score:</span> Weighted sum of supportive vs risk claims
+                      <span className="font-medium">Net Signal Score:</span>{" "}
+                      Weighted sum of supportive vs risk claims
                     </li>
                     <li>
-                      <span className="font-medium">Confidence Threshold:</span> Claims below 0.5 confidence are down-weighted
+                      <span className="font-medium">Confidence Threshold:</span>{" "}
+                      Claims below 0.5 confidence are down-weighted
                     </li>
                     <li>
-                      <span className="font-medium">Critical Claim Impact:</span> High-criticality claims have outsized influence
+                      <span className="font-medium">Critical Claim Impact:</span>{" "}
+                      High-criticality claims have outsized influence
                     </li>
                     <li>
-                      <span className="font-medium">Robustness Check:</span> Decision stability under perturbations
+                      <span className="font-medium">Robustness Check:</span>{" "}
+                      Decision stability under perturbations
                     </li>
                   </ul>
                 </div>
@@ -254,7 +308,9 @@ export default function AuditPage() {
 
               {/* Critical Claims */}
               <div>
-                <h4 className="font-medium mb-3">Critical Claims ({result.critical_claims.length})</h4>
+                <h4 className="font-medium mb-3">
+                  Critical Claims ({result.critical_claims.length})
+                </h4>
                 <div className="space-y-3">
                   {result.critical_claims.map((cc, i) => (
                     <CriticalClaimCard key={i} claim={cc} index={i} />
@@ -275,7 +331,10 @@ export default function AuditPage() {
                     <div className="relative h-3 bg-gradient-to-r from-red-200 via-yellow-200 to-green-200 rounded-full">
                       <div
                         className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-foreground rounded-full border-2 border-background shadow-md"
-                        style={{ left: `${result.confidence * 100}%`, transform: 'translate(-50%, -50%)' }}
+                        style={{
+                          left: `${result.confidence * 100}%`,
+                          transform: "translate(-50%, -50%)",
+                        }}
                       />
                     </div>
                   </div>
@@ -313,10 +372,15 @@ export default function AuditPage() {
                     <span>Low</span>
                     <span>High</span>
                   </div>
-                  <Progress value={result.robustness.epistemic_uncertainty * 100} className="h-2" />
+                  <Progress
+                    value={result.robustness.epistemic_uncertainty * 100}
+                    className="h-2"
+                  />
                 </div>
                 <div className="p-3 rounded-lg bg-muted/30 text-sm">
-                  <p className="font-medium mb-1">Sources of epistemic uncertainty:</p>
+                  <p className="font-medium mb-1">
+                    Sources of epistemic uncertainty:
+                  </p>
                   <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                     <li>Claims with confidence below 0.8</li>
                     <li>Missing due diligence data</li>
@@ -351,10 +415,15 @@ export default function AuditPage() {
                     <span>Low</span>
                     <span>High</span>
                   </div>
-                  <Progress value={result.robustness.aleatoric_uncertainty * 100} className="h-2" />
+                  <Progress
+                    value={result.robustness.aleatoric_uncertainty * 100}
+                    className="h-2"
+                  />
                 </div>
                 <div className="p-3 rounded-lg bg-muted/30 text-sm">
-                  <p className="font-medium mb-1">Sources of aleatoric uncertainty:</p>
+                  <p className="font-medium mb-1">
+                    Sources of aleatoric uncertainty:
+                  </p>
                   <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                     <li>Market volatility</li>
                     <li>Competitive dynamics</li>
@@ -383,10 +452,14 @@ export default function AuditPage() {
                 </div>
                 <div className="p-4 rounded-lg border text-center">
                   <p className="text-sm text-muted-foreground">Flips Found</p>
-                  <p className="text-2xl font-semibold mt-1">{result.robustness.flips_found}</p>
+                  <p className="text-2xl font-semibold mt-1">
+                    {result.robustness.flips_found}
+                  </p>
                 </div>
                 <div className="p-4 rounded-lg border text-center">
-                  <p className="text-sm text-muted-foreground">Total Counterfactuals</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total Counterfactuals
+                  </p>
                   <p className="text-2xl font-semibold mt-1">
                     {result.robustness.counterfactuals_tested}
                   </p>
@@ -489,7 +562,520 @@ export default function AuditPage() {
   );
 }
 
-function CriticalClaimCard({ claim, index }: { claim: CriticalClaim; index: number }) {
+// Enhanced Audit Page for VC Job Results
+function EnhancedAuditPage({
+  vcResult,
+  evidenceGraph,
+  selectedPolicyIndex,
+  setSelectedPolicyIndex,
+  router,
+}: {
+  vcResult: VCJobResult;
+  evidenceGraph: EvidenceGraph | null;
+  selectedPolicyIndex: number;
+  setSelectedPolicyIndex: (index: number) => void;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const decision = vcResult.decision!;
+  const policies = vcResult.policies || [];
+  const uncertainty = vcResult.uncertainty;
+  const counterfactuals = vcResult.counterfactuals || [];
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Full Audit</h1>
+          <p className="text-muted-foreground mt-1">
+            Policy variants, claims analysis, and uncertainty insights
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => router.push("/reasoning")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Reasoning
+          </Button>
+          <Button variant="outline" onClick={() => router.push("/")}>
+            Back to Workspace
+          </Button>
+        </div>
+      </div>
+
+      {/* Primary Decision Summary */}
+      <Card>
+        <CardContent className="py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div
+                className={`p-3 rounded-full ${
+                  decision.primary === "invest"
+                    ? "bg-green-100 dark:bg-green-900"
+                    : decision.primary === "pass"
+                    ? "bg-red-100 dark:bg-red-900"
+                    : "bg-yellow-100 dark:bg-yellow-900"
+                }`}
+              >
+                {decision.primary === "invest" ? (
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                ) : decision.primary === "pass" ? (
+                  <XCircle className="h-8 w-8 text-red-600" />
+                ) : (
+                  <Clock className="h-8 w-8 text-yellow-600" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Primary Decision</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <Badge
+                    variant={
+                      decision.primary === "invest"
+                        ? "invest"
+                        : decision.primary === "pass"
+                        ? "pass"
+                        : "defer"
+                    }
+                    className="text-xl px-4 py-1"
+                  >
+                    {decision.primary.toUpperCase()}
+                  </Badge>
+                  <span className="text-lg">
+                    {(decision.confidence * 100).toFixed(0)}% confidence
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Policy Variants</p>
+              <p className="text-3xl font-bold mt-1">{policies.length}</p>
+            </div>
+          </div>
+          {decision.explanation && (
+            <p className="mt-4 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
+              {decision.explanation}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <Tabs defaultValue="policies" className="space-y-4">
+        <TabsList className="grid grid-cols-4 w-full">
+          <TabsTrigger value="policies" className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            Policy Variants ({policies.length})
+          </TabsTrigger>
+          <TabsTrigger value="uncertainty" className="flex items-center gap-2">
+            <HelpCircle className="h-4 w-4" />
+            Uncertainty
+          </TabsTrigger>
+          <TabsTrigger value="counterfactuals" className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Counterfactuals
+          </TabsTrigger>
+          <TabsTrigger value="improve" className="flex items-center gap-2">
+            <Lightbulb className="h-4 w-4" />
+            Reduce Uncertainty
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Policy Variants Tab */}
+        <TabsContent value="policies" className="space-y-4">
+          {policies.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No policy variants generated</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Policy Selector */}
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {policies.map((policy, index) => (
+                  <Button
+                    key={policy.policy_id}
+                    variant={selectedPolicyIndex === index ? "default" : "outline"}
+                    onClick={() => setSelectedPolicyIndex(index)}
+                    className="shrink-0"
+                  >
+                    <Badge
+                      variant={
+                        policy.decision === "invest"
+                          ? "invest"
+                          : policy.decision === "pass"
+                          ? "pass"
+                          : "defer"
+                      }
+                      className="mr-2"
+                    >
+                      {policy.decision}
+                    </Badge>
+                    Policy {index + 1}
+                    {index === 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        Best
+                      </Badge>
+                    )}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Side by Side Comparison */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {policies.slice(0, 3).map((policy, index) => (
+                  <PolicyVariantCard
+                    key={policy.policy_id}
+                    policy={policy}
+                    index={index}
+                    isSelected={selectedPolicyIndex === index}
+                    onSelect={() => setSelectedPolicyIndex(index)}
+                  />
+                ))}
+              </div>
+
+              {/* Selected Policy Details */}
+              {policies[selectedPolicyIndex] && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Target className="h-5 w-5" />
+                      Policy {selectedPolicyIndex + 1} Rules Detail
+                    </CardTitle>
+                    <CardDescription>
+                      Predicates and claims used by this policy variant
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {policies[selectedPolicyIndex].rules.map((rule, ruleIndex) => (
+                      <div
+                        key={ruleIndex}
+                        className="p-4 rounded-lg border bg-muted/20"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-sm font-mono bg-background px-2 py-1 rounded">
+                            {rule.predicate}
+                          </code>
+                          <Badge variant="outline">
+                            weight: {(rule.weight * 100).toFixed(0)}%
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {rule.claim_ids.map((claimId) => (
+                            <Badge key={claimId} variant="secondary" className="text-xs">
+                              {claimId}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+        </TabsContent>
+
+        {/* Uncertainty Tab */}
+        <TabsContent value="uncertainty" className="space-y-4">
+          {uncertainty ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Uncertainty Level */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Overall Uncertainty</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center p-6">
+                    <Badge
+                      variant={
+                        uncertainty.level === "low"
+                          ? "default"
+                          : uncertainty.level === "high" ||
+                            uncertainty.level === "very_high"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                      className="text-2xl px-6 py-2"
+                    >
+                      {uncertainty.level.toUpperCase()}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg border text-center">
+                      <p className="text-sm text-muted-foreground">Epistemic</p>
+                      <p className="text-2xl font-bold mt-1">
+                        {(uncertainty.epistemic * 100).toFixed(0)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Reducible</p>
+                    </div>
+                    <div className="p-4 rounded-lg border text-center">
+                      <p className="text-sm text-muted-foreground">Aleatoric</p>
+                      <p className="text-2xl font-bold mt-1">
+                        {(uncertainty.aleatoric * 100).toFixed(0)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Irreducible</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Missing Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                    Missing Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {uncertainty.missing_info.map((info, i) => (
+                      <li
+                        key={i}
+                        className="flex items-start gap-2 p-2 rounded bg-muted/30"
+                      >
+                        <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                        <span className="text-sm">{info}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <HelpCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No uncertainty analysis available</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Counterfactuals Tab */}
+        <TabsContent value="counterfactuals" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Counterfactual Analysis</CardTitle>
+              <CardDescription>
+                What changes would flip the decision?
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {counterfactuals.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <RefreshCw className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No counterfactuals generated</p>
+                  <p className="text-sm mt-1">
+                    The decision appears robust to perturbations
+                  </p>
+                </div>
+              ) : (
+                counterfactuals.map((cf, i) => (
+                  <div
+                    key={i}
+                    className="p-4 rounded-lg border border-l-4 border-l-amber-500"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline">{cf.original_decision}</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge
+                        variant={
+                          cf.flipped_decision === "invest"
+                            ? "invest"
+                            : cf.flipped_decision === "pass"
+                            ? "pass"
+                            : "defer"
+                        }
+                      >
+                        {cf.flipped_decision}
+                      </Badge>
+                      <Badge variant="secondary" className="ml-auto">
+                        {(cf.magnitude * 100).toFixed(0)}% change
+                      </Badge>
+                    </div>
+                    <p className="text-sm">{cf.description}</p>
+                    {cf.key_changes.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {cf.key_changes.map((change, j) => (
+                          <Badge key={j} variant="outline" className="text-xs">
+                            {change}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Reduce Uncertainty Tab */}
+        <TabsContent value="improve" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-amber-500" />
+                How to Reduce Uncertainty
+              </CardTitle>
+              <CardDescription>
+                Suggested questions and data to gather for higher confidence
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {uncertainty?.suggested_questions &&
+              uncertainty.suggested_questions.length > 0 ? (
+                <div>
+                  <h4 className="font-medium mb-3">Suggested Questions</h4>
+                  <div className="space-y-2">
+                    {uncertainty.suggested_questions.map((question, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800"
+                      >
+                        <HelpCircle className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
+                        <span className="text-sm">{question}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Lightbulb className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No specific suggestions available</p>
+                  <p className="text-sm mt-1">
+                    The model has sufficient confidence in the current evidence
+                  </p>
+                </div>
+              )}
+
+              {uncertainty?.missing_info &&
+                uncertainty.missing_info.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3">Data Gaps to Address</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {uncertainty.missing_info.map((info, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start gap-2 p-3 rounded-lg border"
+                        >
+                          <Target className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                          <span className="text-sm">{info}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              <div className="p-4 rounded-lg bg-muted/30 border">
+                <h4 className="font-medium mb-2">Next Steps</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Gather answers to the suggested questions above</li>
+                  <li>Add new claims to the evidence graph</li>
+                  <li>Re-run context preview with updated constraints</li>
+                  <li>Execute reasoning again for improved confidence</li>
+                </ol>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Disclaimer */}
+      <Disclaimer />
+    </div>
+  );
+}
+
+// Policy Variant Card Component
+function PolicyVariantCard({
+  policy,
+  index,
+  isSelected,
+  onSelect,
+}: {
+  policy: PolicyVariant;
+  index: number;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Card
+      className={`cursor-pointer transition-all ${
+        isSelected ? "ring-2 ring-primary" : "hover:border-primary/50"
+      }`}
+      onClick={onSelect}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">Policy {index + 1}</CardTitle>
+          {index === 0 && (
+            <Badge variant="secondary" className="text-xs">
+              Best MDL
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Decision */}
+        <div className="text-center p-3 rounded-lg bg-muted/30">
+          <Badge
+            variant={
+              policy.decision === "invest"
+                ? "invest"
+                : policy.decision === "pass"
+                ? "pass"
+                : "defer"
+            }
+            className="text-lg px-3 py-0.5"
+          >
+            {policy.decision.toUpperCase()}
+          </Badge>
+          <p className="text-sm text-muted-foreground mt-1">
+            {(policy.confidence * 100).toFixed(0)}% confidence
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="p-2 rounded border">
+            <p className="text-lg font-bold">{policy.mdl_score.toFixed(1)}</p>
+            <p className="text-xs text-muted-foreground">MDL Score</p>
+          </div>
+          <div className="p-2 rounded border">
+            <p className="text-lg font-bold">{policy.rules.length}</p>
+            <p className="text-xs text-muted-foreground">Rules</p>
+          </div>
+        </div>
+
+        {/* Coverage */}
+        <div className="p-2 rounded bg-muted/30">
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <span>Coverage</span>
+            <span>
+              {policy.coverage.covered}/{policy.coverage.total}
+            </span>
+          </div>
+          <Progress
+            value={(policy.coverage.covered / policy.coverage.total) * 100}
+            className="h-1.5"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CriticalClaimCard({
+  claim,
+  index,
+}: {
+  claim: CriticalClaim;
+  index: number;
+}) {
   const polarityIcon =
     claim.polarity === "supportive" ? (
       <TrendingUp className="h-4 w-4 text-green-600" />
@@ -595,7 +1181,9 @@ function CounterfactualCard({
               </div>
             )}
             <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-              <span>Perturbation magnitude: {(cf.perturbation_magnitude * 100).toFixed(1)}%</span>
+              <span>
+                Perturbation magnitude: {(cf.perturbation_magnitude * 100).toFixed(1)}%
+              </span>
             </div>
           </div>
         </div>

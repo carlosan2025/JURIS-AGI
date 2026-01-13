@@ -29,6 +29,13 @@ from .models import (
     PredictionResult,
     GridData,
 )
+from .vc_models import (
+    VCSolveRequest,
+    VCSolveResponse,
+    VCJobResult,
+    VCJobStatus,
+    VCJobEvent,
+)
 from .config import APIConfig
 
 # Optional Redis import
@@ -381,6 +388,295 @@ async def cancel_job(job_id: str):
             raise HTTPException(status_code=500, detail="Failed to cancel job")
 
     raise HTTPException(status_code=503, detail="Redis not available")
+
+
+# =============================================================================
+# VC Decision Endpoints
+# =============================================================================
+
+
+# In-memory storage for VC jobs (standalone mode)
+_vc_jobs: dict[str, dict] = {}
+
+
+@app.post("/vc/solve", response_model=VCSolveResponse, tags=["VC Decision"])
+async def submit_vc_solve_request(
+    request: VCSolveRequest,
+    background_tasks: BackgroundTasks,
+):
+    """
+    Submit a VC investment decision analysis.
+
+    Accepts either:
+    - deal_id + question (fetches from Evidence API)
+    - claims directly (for demo mode)
+
+    Returns a job ID for tracking the analysis.
+    """
+    # Validate request
+    if not request.deal_id and not request.claims:
+        raise HTTPException(
+            status_code=400,
+            detail="Either deal_id or claims must be provided"
+        )
+
+    job_id = f"vcjob_{uuid.uuid4().hex[:12]}"
+    created_at = datetime.utcnow()
+
+    # Create job data
+    job_data = {
+        "job_id": job_id,
+        "status": VCJobStatus.PENDING.value,
+        "created_at": created_at.isoformat(),
+        "deal_id": request.deal_id,
+        "question": request.question,
+        "claims": [c.model_dump() for c in request.claims] if request.claims else None,
+        "constraints": request.constraints.model_dump(),
+        "historical_decisions": request.historical_decisions,
+        "include_trace": request.include_trace,
+        "include_events": request.include_events,
+        "events": [],
+    }
+
+    redis_client = get_redis()
+
+    if redis_client:
+        # Store job in Redis
+        try:
+            redis_client.setex(
+                f"juris:vcjob:{job_id}",
+                get_config().job_ttl_seconds,
+                json.dumps(job_data),
+            )
+            # Enqueue job for processing
+            queue = get_queue()
+            if queue:
+                queue.enqueue(
+                    "juris_agi.api.worker.process_vc_job",
+                    job_id,
+                    job_timeout=get_config().job_timeout_seconds,
+                )
+        except Exception as e:
+            logger.error(f"Failed to enqueue VC job: {e}")
+            raise HTTPException(status_code=503, detail="Failed to enqueue job")
+    else:
+        # Run synchronously in standalone mode
+        _vc_jobs[job_id] = job_data
+        background_tasks.add_task(run_vc_job_sync, job_id, job_data)
+
+    return VCSolveResponse(
+        job_id=job_id,
+        status=VCJobStatus.PENDING,
+        created_at=created_at,
+        trace_url=f"/vc/jobs/{job_id}/trace",
+        events_url=f"/vc/jobs/{job_id}/events",
+    )
+
+
+@app.get("/vc/jobs/{job_id}", response_model=VCJobResult, tags=["VC Decision"])
+async def get_vc_job_result(
+    job_id: str,
+    include_trace: bool = Query(default=False, description="Include inline trace data"),
+):
+    """
+    Get the status and result of a VC decision analysis job.
+
+    Returns the decision, policies, uncertainty analysis, and events.
+    """
+    job_data = await _get_vc_job_data(job_id)
+
+    # Build response from job data
+    result = VCJobResult(
+        job_id=job_id,
+        status=VCJobStatus(job_data.get("status", "pending")),
+        deal_id=job_data.get("deal_id"),
+        question=job_data.get("question"),
+        created_at=datetime.fromisoformat(job_data["created_at"]),
+        started_at=datetime.fromisoformat(job_data["started_at"]) if job_data.get("started_at") else None,
+        completed_at=datetime.fromisoformat(job_data["completed_at"]) if job_data.get("completed_at") else None,
+        runtime_seconds=job_data.get("runtime_seconds"),
+        context_id=job_data.get("context_id"),
+        error_message=job_data.get("error_message"),
+        trace_url=f"/vc/jobs/{job_id}/trace",
+        events_url=f"/vc/jobs/{job_id}/events",
+    )
+
+    # Add working set summary
+    if "working_set" in job_data and job_data["working_set"]:
+        from .vc_models import WorkingSetSummary
+        result.working_set = WorkingSetSummary(**job_data["working_set"])
+
+    # Add decision
+    if "decision" in job_data and job_data["decision"]:
+        from .vc_models import DecisionOutput
+        result.decision = DecisionOutput(**job_data["decision"])
+
+    # Add policies
+    if "policies" in job_data and job_data["policies"]:
+        from .vc_models import PolicyOutput, PolicyRule
+        for p in job_data["policies"]:
+            rules = [PolicyRule(**r) for r in p.get("rules", [])]
+            result.policies.append(PolicyOutput(
+                policy_id=p["policy_id"],
+                rules=rules,
+                mdl_score=p["mdl_score"],
+                coverage=p["coverage"],
+                exception_count=p.get("exception_count", 0),
+                partition=p.get("partition"),
+            ))
+
+    # Add uncertainty
+    if "uncertainty" in job_data and job_data["uncertainty"]:
+        from .vc_models import UncertaintyOutput
+        result.uncertainty = UncertaintyOutput(**job_data["uncertainty"])
+
+    # Add events
+    if "events" in job_data and job_data["events"]:
+        for e in job_data["events"]:
+            # Handle timestamp - could be string (from JSON) or datetime object
+            ts = e["timestamp"]
+            if isinstance(ts, str):
+                ts = datetime.fromisoformat(ts)
+            result.events.append(VCJobEvent(
+                event_id=e["event_id"],
+                event_type=e["event_type"],
+                timestamp=ts,
+                data=e.get("data", {}),
+                message=e.get("message"),
+            ))
+
+    # Add trace data if requested
+    if include_trace and "trace_data" in job_data:
+        result.trace_data = job_data["trace_data"]
+
+    return result
+
+
+@app.get("/vc/jobs/{job_id}/events", tags=["VC Decision"])
+async def get_vc_job_events(job_id: str):
+    """
+    Get events for a VC job.
+
+    Returns the list of processing events with timestamps.
+    """
+    job_data = await _get_vc_job_data(job_id)
+
+    events = []
+    for e in job_data.get("events", []):
+        events.append({
+            "event_id": e["event_id"],
+            "event_type": e["event_type"],
+            "timestamp": e["timestamp"],
+            "data": e.get("data", {}),
+            "message": e.get("message"),
+        })
+
+    return {"job_id": job_id, "events": events}
+
+
+@app.get("/vc/jobs/{job_id}/trace", tags=["VC Decision"])
+async def get_vc_job_trace(job_id: str):
+    """
+    Get detailed trace for a VC job.
+
+    Returns the full execution trace for debugging and audit.
+    """
+    job_data = await _get_vc_job_data(job_id)
+
+    return {
+        "job_id": job_id,
+        "trace": job_data.get("trace_data", {}),
+    }
+
+
+async def _get_vc_job_data(job_id: str) -> dict:
+    """Get VC job data from Redis or in-memory storage."""
+    redis_client = get_redis()
+    job_data = None
+
+    if redis_client:
+        try:
+            raw_data = redis_client.get(f"juris:vcjob:{job_id}")
+            if raw_data:
+                job_data = json.loads(raw_data)
+        except Exception as e:
+            logger.error(f"Failed to fetch VC job: {e}")
+
+    # Fallback to in-memory storage
+    if job_data is None:
+        job_data = _vc_jobs.get(job_id)
+
+    if job_data is None:
+        raise HTTPException(status_code=404, detail=f"VC job {job_id} not found")
+
+    return job_data
+
+
+async def run_vc_job_sync(job_id: str, job_data: dict):
+    """
+    Run a VC job synchronously (standalone mode without Redis).
+    """
+    from ..vc.orchestrator import VCOrchestrator, OrchestratorConfig
+    from .vc_models import DirectClaim, VCConstraints
+
+    try:
+        # Update status
+        job_data["status"] = VCJobStatus.FETCHING_CONTEXT.value
+        job_data["started_at"] = datetime.utcnow().isoformat()
+
+        # Build claims if provided
+        claims = None
+        if job_data.get("claims"):
+            claims = [DirectClaim(**c) for c in job_data["claims"]]
+
+        # Build constraints
+        constraints = VCConstraints(**job_data.get("constraints", {}))
+
+        # Run orchestrator
+        orchestrator = VCOrchestrator(config=OrchestratorConfig(
+            include_trace=job_data.get("include_trace", True),
+        ))
+
+        result = await orchestrator.solve(
+            deal_id=job_data.get("deal_id"),
+            question=job_data.get("question"),
+            claims=claims,
+            constraints=constraints,
+            historical_decisions=job_data.get("historical_decisions"),
+        )
+
+        # Update job data with results
+        job_data["status"] = result.status.value
+        job_data["completed_at"] = datetime.utcnow().isoformat()
+        job_data["runtime_seconds"] = result.runtime_seconds
+        job_data["context_id"] = result.context_id
+
+        if result.working_set:
+            job_data["working_set"] = result.working_set.model_dump()
+
+        if result.decision:
+            job_data["decision"] = result.decision.model_dump()
+
+        if result.policies:
+            job_data["policies"] = [p.model_dump() for p in result.policies]
+
+        if result.uncertainty:
+            job_data["uncertainty"] = result.uncertainty.model_dump()
+
+        if result.events:
+            job_data["events"] = [e.model_dump() for e in result.events]
+
+        if result.trace_data:
+            job_data["trace_data"] = result.trace_data
+
+        if result.error_message:
+            job_data["error_message"] = result.error_message
+
+    except Exception as e:
+        job_data["status"] = VCJobStatus.FAILED.value
+        job_data["completed_at"] = datetime.utcnow().isoformat()
+        job_data["error_message"] = str(e)
+        logger.exception(f"VC job {job_id} failed")
 
 
 # =============================================================================

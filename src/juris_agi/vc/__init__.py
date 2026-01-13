@@ -4,6 +4,7 @@ VC Decision Reasoning Module.
 Provides counterfactual and robustness analysis for VC investment decisions.
 
 Key components:
+- orchestrator: End-to-end VC decision workflow
 - counterfactuals: Generate minimal perturbations to evidence graphs
 - decision_analysis: Identify critical claims and compute robustness
 - trace: Complete audit trail with counterfactual explanations
@@ -34,7 +35,19 @@ from .trace import (
     create_decision_trace,
 )
 
+from .orchestrator import (
+    OrchestratorConfig,
+    OrchestratorTrace,
+    VCOrchestrator,
+    solve_vc_decision,
+)
+
 __all__ = [
+    # Orchestrator
+    "OrchestratorConfig",
+    "OrchestratorTrace",
+    "VCOrchestrator",
+    "solve_vc_decision",
     # Counterfactuals
     "PerturbationType",
     "ClaimPerturbation",

@@ -34,8 +34,11 @@ export default function RootLayout({
                 <a href="/extract" className="text-sm text-muted-foreground hover:text-foreground">
                   Extract
                 </a>
-                <a href="/analyze" className="text-sm text-muted-foreground hover:text-foreground">
-                  Analyze
+                <a href="/context" className="text-sm text-muted-foreground hover:text-foreground">
+                  Context
+                </a>
+                <a href="/reasoning" className="text-sm text-muted-foreground hover:text-foreground">
+                  Reasoning
                 </a>
                 <a href="/audit" className="text-sm text-muted-foreground hover:text-foreground">
                   Audit
