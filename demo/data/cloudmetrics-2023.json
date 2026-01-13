@@ -1,0 +1,109 @@
+{
+  "company_id": "cloudmetrics-2023",
+  "company_name": "CloudMetrics Inc.",
+  "sector": "Enterprise SaaS",
+  "stage": "Series A",
+  "outcome": "invest",
+  "outcome_rationale": "Strong unit economics, experienced team, clear product-market fit",
+  "evidence_graph": {
+    "company_id": "cloudmetrics-2023",
+    "claims": [
+      {
+        "claim_type": "company_identity",
+        "field": "legal_name",
+        "value": "CloudMetrics Inc.",
+        "confidence": 1.0,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "round_terms",
+        "field": "pre_money_valuation",
+        "value": 25000000,
+        "confidence": 0.95,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "round_terms",
+        "field": "raise_amount",
+        "value": 5000000,
+        "confidence": 0.95,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "traction",
+        "field": "arr",
+        "value": 2400000,
+        "confidence": 0.92,
+        "polarity": "supportive",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "traction",
+        "field": "growth_rate",
+        "value": 0.15,
+        "confidence": 0.88,
+        "polarity": "supportive",
+        "unit": "monthly"
+      },
+      {
+        "claim_type": "traction",
+        "field": "net_revenue_retention",
+        "value": 1.25,
+        "confidence": 0.85,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "business_model",
+        "field": "gross_margin",
+        "value": 0.82,
+        "confidence": 0.9,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "business_model",
+        "field": "ltv_cac_ratio",
+        "value": 4.2,
+        "confidence": 0.85,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "team_quality",
+        "field": "founder_background",
+        "value": "Ex-Datadog engineering lead, 12 years observability",
+        "confidence": 0.95,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "team_composition",
+        "field": "team_size",
+        "value": 18,
+        "confidence": 0.9,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "market_scope",
+        "field": "tam",
+        "value": 15000000000,
+        "confidence": 0.7,
+        "polarity": "supportive",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "differentiation",
+        "field": "unique_value_prop",
+        "value": "AI-powered anomaly detection with 10x fewer false positives",
+        "confidence": 0.75,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "capital_intensity",
+        "field": "runway_months",
+        "value": 24,
+        "confidence": 0.85,
+        "polarity": "supportive"
+      }
+    ]
+  }
+}

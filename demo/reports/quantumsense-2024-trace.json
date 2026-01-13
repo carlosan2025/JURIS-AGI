@@ -1,0 +1,91 @@
+{
+  "company_id": "quantumsense-2024",
+  "decision": "invest",
+  "confidence": 0.9038461538461539,
+  "created_at": "2026-01-12T20:23:54.502659",
+  "analyst_id": null,
+  "model_version": "1.0",
+  "summary": {
+    "company_id": "quantumsense-2024",
+    "decision": "invest",
+    "confidence": 0.9038461538461539,
+    "num_critical_claims": 0,
+    "num_counterfactuals_tested": 0,
+    "num_flips_found": 0,
+    "robustness_score": 1.0,
+    "stability_margin": 1.0
+  },
+  "critical_claims": [],
+  "robustness": {
+    "overall_score": 1.0,
+    "stability_margin": 1.0,
+    "num_critical_claims": 0,
+    "most_fragile_claim_index": null,
+    "perturbations_tested": 20,
+    "flips_found": 0,
+    "robustness_by_claim_type": {
+      "technical_moat": 1.0,
+      "exit_logic": 1.0,
+      "traction": 1.0,
+      "market_scope": 1.0,
+      "company_identity": 1.0,
+      "differentiation": 1.0,
+      "round_terms": 1.0,
+      "team_quality": 1.0
+    }
+  },
+  "counterfactual_explanations": [],
+  "decision_flips": [],
+  "flip_summary": [],
+  "trace_entries": [
+    {
+      "timestamp": "2026-01-12T20:23:54.502660",
+      "entry_type": "analysis_start",
+      "content": {
+        "decision": "invest",
+        "confidence": 0.9038461538461539,
+        "metadata": {
+          "graph_company_id": "quantumsense-2024",
+          "num_claims": 13,
+          "coverage_ratio": 0.5333333333333333
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T20:23:54.502661",
+      "entry_type": "robustness_analysis",
+      "content": {
+        "overall_score": 1.0,
+        "stability_margin": 1.0,
+        "num_critical_claims": 0,
+        "most_fragile_claim_index": null,
+        "perturbations_tested": 20,
+        "flips_found": 0,
+        "robustness_by_claim_type": {
+          "technical_moat": 1.0,
+          "exit_logic": 1.0,
+          "traction": 1.0,
+          "market_scope": 1.0,
+          "company_identity": 1.0,
+          "differentiation": 1.0,
+          "round_terms": 1.0,
+          "team_quality": 1.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T20:23:54.502663",
+      "entry_type": "analysis_complete",
+      "content": {
+        "company_id": "quantumsense-2024",
+        "decision": "invest",
+        "confidence": 0.9038461538461539,
+        "num_critical_claims": 0,
+        "num_counterfactuals_tested": 0,
+        "num_flips_found": 0,
+        "robustness_score": 1.0,
+        "stability_margin": 1.0
+      }
+    }
+  ]
+}

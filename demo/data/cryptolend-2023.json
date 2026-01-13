@@ -1,0 +1,108 @@
+{
+  "company_id": "cryptolend-2023",
+  "company_name": "CryptoLend Finance",
+  "sector": "Crypto/DeFi",
+  "stage": "Seed",
+  "outcome": "pass",
+  "outcome_rationale": "Regulatory uncertainty, unproven business model, inexperienced team",
+  "evidence_graph": {
+    "company_id": "cryptolend-2023",
+    "claims": [
+      {
+        "claim_type": "company_identity",
+        "field": "legal_name",
+        "value": "CryptoLend Finance Ltd.",
+        "confidence": 1.0,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "round_terms",
+        "field": "pre_money_valuation",
+        "value": 12000000,
+        "confidence": 0.9,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "traction",
+        "field": "tvl",
+        "value": 500000,
+        "confidence": 0.75,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "traction",
+        "field": "monthly_volume",
+        "value": 2000000,
+        "confidence": 0.7,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "business_model",
+        "field": "revenue_model",
+        "value": "0.3% transaction fee + spread on lending",
+        "confidence": 0.8,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "business_model",
+        "field": "gross_margin",
+        "value": 0.45,
+        "confidence": 0.65,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "team_quality",
+        "field": "founder_background",
+        "value": "2 years crypto trading, no financial services experience",
+        "confidence": 0.85,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "team_composition",
+        "field": "team_size",
+        "value": 4,
+        "confidence": 0.9,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "regulatory_risk",
+        "field": "compliance_status",
+        "value": "No money transmitter license, SEC guidance unclear",
+        "confidence": 0.85,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "regulatory_risk",
+        "field": "jurisdiction",
+        "value": "Cayman Islands incorporation, US customers",
+        "confidence": 0.9,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "execution_risk",
+        "field": "smart_contract_audit",
+        "value": "No third-party audit completed",
+        "confidence": 0.8,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "market_scope",
+        "field": "market_timing",
+        "value": "Post-FTX collapse, crypto winter",
+        "confidence": 0.9,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "capital_intensity",
+        "field": "monthly_burn",
+        "value": 80000,
+        "confidence": 0.75,
+        "polarity": "risk",
+        "unit": "USD"
+      }
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "company_id": "cryptolend-2023",
+  "decision": "pass",
+  "confidence": 0.7846153846153846,
+  "created_at": "2026-01-12T20:23:54.501420",
+  "analyst_id": null,
+  "model_version": "1.0",
+  "summary": {
+    "company_id": "cryptolend-2023",
+    "decision": "pass",
+    "confidence": 0.7846153846153846,
+    "num_critical_claims": 0,
+    "num_counterfactuals_tested": 0,
+    "num_flips_found": 0,
+    "robustness_score": 1.0,
+    "stability_margin": 1.0
+  },
+  "critical_claims": [],
+  "robustness": {
+    "overall_score": 1.0,
+    "stability_margin": 1.0,
+    "num_critical_claims": 0,
+    "most_fragile_claim_index": null,
+    "perturbations_tested": 20,
+    "flips_found": 0,
+    "robustness_by_claim_type": {
+      "business_model": 1.0,
+      "team_quality": 1.0,
+      "execution_risk": 1.0,
+      "traction": 1.0,
+      "market_scope": 1.0,
+      "capital_intensity": 1.0,
+      "round_terms": 1.0,
+      "regulatory_risk": 1.0
+    }
+  },
+  "counterfactual_explanations": [],
+  "decision_flips": [],
+  "flip_summary": [],
+  "trace_entries": [
+    {
+      "timestamp": "2026-01-12T20:23:54.501421",
+      "entry_type": "analysis_start",
+      "content": {
+        "decision": "pass",
+        "confidence": 0.7846153846153846,
+        "metadata": {
+          "graph_company_id": "cryptolend-2023",
+          "num_claims": 13,
+          "coverage_ratio": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T20:23:54.501423",
+      "entry_type": "robustness_analysis",
+      "content": {
+        "overall_score": 1.0,
+        "stability_margin": 1.0,
+        "num_critical_claims": 0,
+        "most_fragile_claim_index": null,
+        "perturbations_tested": 20,
+        "flips_found": 0,
+        "robustness_by_claim_type": {
+          "business_model": 1.0,
+          "team_quality": 1.0,
+          "execution_risk": 1.0,
+          "traction": 1.0,
+          "market_scope": 1.0,
+          "capital_intensity": 1.0,
+          "round_terms": 1.0,
+          "regulatory_risk": 1.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T20:23:54.501424",
+      "entry_type": "analysis_complete",
+      "content": {
+        "company_id": "cryptolend-2023",
+        "decision": "pass",
+        "confidence": 0.7846153846153846,
+        "num_critical_claims": 0,
+        "num_counterfactuals_tested": 0,
+        "num_flips_found": 0,
+        "robustness_score": 1.0,
+        "stability_margin": 1.0
+      }
+    }
+  ]
+}

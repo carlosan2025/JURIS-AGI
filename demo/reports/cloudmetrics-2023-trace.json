@@ -1,0 +1,91 @@
+{
+  "company_id": "cloudmetrics-2023",
+  "decision": "invest",
+  "confidence": 0.8884615384615384,
+  "created_at": "2026-01-12T20:23:54.500223",
+  "analyst_id": null,
+  "model_version": "1.0",
+  "summary": {
+    "company_id": "cloudmetrics-2023",
+    "decision": "invest",
+    "confidence": 0.8884615384615384,
+    "num_critical_claims": 0,
+    "num_counterfactuals_tested": 0,
+    "num_flips_found": 0,
+    "robustness_score": 1.0,
+    "stability_margin": 1.0
+  },
+  "critical_claims": [],
+  "robustness": {
+    "overall_score": 1.0,
+    "stability_margin": 1.0,
+    "num_critical_claims": 0,
+    "most_fragile_claim_index": null,
+    "perturbations_tested": 20,
+    "flips_found": 0,
+    "robustness_by_claim_type": {
+      "team_composition": 1.0,
+      "traction": 1.0,
+      "market_scope": 1.0,
+      "round_terms": 1.0,
+      "team_quality": 1.0,
+      "business_model": 1.0,
+      "differentiation": 1.0,
+      "capital_intensity": 1.0
+    }
+  },
+  "counterfactual_explanations": [],
+  "decision_flips": [],
+  "flip_summary": [],
+  "trace_entries": [
+    {
+      "timestamp": "2026-01-12T20:23:54.500224",
+      "entry_type": "analysis_start",
+      "content": {
+        "decision": "invest",
+        "confidence": 0.8884615384615384,
+        "metadata": {
+          "graph_company_id": "cloudmetrics-2023",
+          "num_claims": 13,
+          "coverage_ratio": 0.6
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T20:23:54.500225",
+      "entry_type": "robustness_analysis",
+      "content": {
+        "overall_score": 1.0,
+        "stability_margin": 1.0,
+        "num_critical_claims": 0,
+        "most_fragile_claim_index": null,
+        "perturbations_tested": 20,
+        "flips_found": 0,
+        "robustness_by_claim_type": {
+          "team_composition": 1.0,
+          "traction": 1.0,
+          "market_scope": 1.0,
+          "round_terms": 1.0,
+          "team_quality": 1.0,
+          "business_model": 1.0,
+          "differentiation": 1.0,
+          "capital_intensity": 1.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T20:23:54.500226",
+      "entry_type": "analysis_complete",
+      "content": {
+        "company_id": "cloudmetrics-2023",
+        "decision": "invest",
+        "confidence": 0.8884615384615384,
+        "num_critical_claims": 0,
+        "num_counterfactuals_tested": 0,
+        "num_flips_found": 0,
+        "robustness_score": 1.0,
+        "stability_margin": 1.0
+      }
+    }
+  ]
+}

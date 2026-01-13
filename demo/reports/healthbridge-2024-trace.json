@@ -1,0 +1,99 @@
+{
+  "company_id": "healthbridge-2024",
+  "decision": "defer",
+  "confidence": 0.5,
+  "created_at": "2026-01-12T20:23:54.498195",
+  "analyst_id": null,
+  "model_version": "1.0",
+  "summary": {
+    "company_id": "healthbridge-2024",
+    "decision": "defer",
+    "confidence": 0.5,
+    "num_critical_claims": 0,
+    "num_counterfactuals_tested": 0,
+    "num_flips_found": 0,
+    "robustness_score": 1.0,
+    "stability_margin": 1.0
+  },
+  "critical_claims": [],
+  "robustness": {
+    "overall_score": 1.0,
+    "stability_margin": 1.0,
+    "num_critical_claims": 0,
+    "most_fragile_claim_index": null,
+    "perturbations_tested": 20,
+    "flips_found": 0,
+    "robustness_by_claim_type": {
+      "market_scope": 1.0,
+      "capital_intensity": 1.0,
+      "round_terms": 1.0,
+      "product_readiness": 1.0,
+      "traction": 1.0,
+      "technical_moat": 1.0,
+      "regulatory_risk": 1.0,
+      "exit_logic": 1.0,
+      "company_identity": 1.0,
+      "team_composition": 1.0,
+      "business_model": 1.0,
+      "differentiation": 1.0
+    }
+  },
+  "counterfactual_explanations": [],
+  "decision_flips": [],
+  "flip_summary": [],
+  "trace_entries": [
+    {
+      "timestamp": "2026-01-12T20:23:54.498196",
+      "entry_type": "analysis_start",
+      "content": {
+        "decision": "defer",
+        "confidence": 0.5,
+        "metadata": {
+          "graph_company_id": "healthbridge-2024",
+          "num_claims": 31,
+          "coverage_ratio": 1.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T20:23:54.498198",
+      "entry_type": "robustness_analysis",
+      "content": {
+        "overall_score": 1.0,
+        "stability_margin": 1.0,
+        "num_critical_claims": 0,
+        "most_fragile_claim_index": null,
+        "perturbations_tested": 20,
+        "flips_found": 0,
+        "robustness_by_claim_type": {
+          "market_scope": 1.0,
+          "capital_intensity": 1.0,
+          "round_terms": 1.0,
+          "product_readiness": 1.0,
+          "traction": 1.0,
+          "technical_moat": 1.0,
+          "regulatory_risk": 1.0,
+          "exit_logic": 1.0,
+          "company_identity": 1.0,
+          "team_composition": 1.0,
+          "business_model": 1.0,
+          "differentiation": 1.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T20:23:54.498199",
+      "entry_type": "analysis_complete",
+      "content": {
+        "company_id": "healthbridge-2024",
+        "decision": "defer",
+        "confidence": 0.5,
+        "num_critical_claims": 0,
+        "num_counterfactuals_tested": 0,
+        "num_flips_found": 0,
+        "robustness_score": 1.0,
+        "stability_margin": 1.0
+      }
+    }
+  ]
+}

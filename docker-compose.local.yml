@@ -81,6 +81,29 @@ services:
     restart: unless-stopped
 
   # ==========================================================================
+  # Web UI (Next.js)
+  # ==========================================================================
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      target: dev
+    container_name: juris-local-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000
+      - NODE_ENV=development
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
   # Worker (CPU-only)
   # ==========================================================================
   worker:

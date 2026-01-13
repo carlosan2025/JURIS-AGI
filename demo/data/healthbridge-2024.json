@@ -1,0 +1,241 @@
+{
+  "company_id": "healthbridge-2024",
+  "company_name": "HealthBridge AI",
+  "sector": "Healthcare / AI",
+  "stage": "Series A",
+  "outcome": null,
+  "outcome_rationale": null,
+  "description": "\nHealthBridge AI is building an AI-powered clinical decision support system\nfor primary care physicians. The platform analyzes patient history, symptoms,\nand test results to suggest differential diagnoses and care pathways.\n\nKey observations:\n- Strong technical team but limited healthcare domain experience\n- Early traction with 3 pilot clinics, promising engagement metrics\n- Large TAM but highly regulated market with long sales cycles\n- Reasonable valuation for the space\n- Some regulatory clarity via FDA's AI/ML guidance, but path to clearance unclear\n- Competitive landscape includes well-funded incumbents\n",
+  "evidence_graph": {
+    "company_id": "healthbridge-2024",
+    "claims": [
+      {
+        "claim_type": "company_identity",
+        "field": "legal_name",
+        "value": "HealthBridge AI Inc.",
+        "confidence": 1.0,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "company_identity",
+        "field": "founded_date",
+        "value": "2022-03",
+        "confidence": 0.95,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "round_terms",
+        "field": "pre_money_valuation",
+        "value": 18000000,
+        "confidence": 0.95,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "round_terms",
+        "field": "raise_amount",
+        "value": 4000000,
+        "confidence": 0.95,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "round_terms",
+        "field": "instrument_type",
+        "value": "Series A Preferred",
+        "confidence": 0.95,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "traction",
+        "field": "arr",
+        "value": 180000,
+        "confidence": 0.85,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "traction",
+        "field": "pilot_clinics",
+        "value": 3,
+        "confidence": 0.9,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "traction",
+        "field": "physician_nps",
+        "value": 72,
+        "confidence": 0.8,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "traction",
+        "field": "diagnoses_assisted",
+        "value": 15000,
+        "confidence": 0.85,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "team_quality",
+        "field": "founder_background",
+        "value": "MIT CS PhD, 8 years ML at Apple Health",
+        "confidence": 0.92,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "team_composition",
+        "field": "team_size",
+        "value": 12,
+        "confidence": 0.9,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "team_composition",
+        "field": "clinical_advisors",
+        "value": 2,
+        "confidence": 0.85,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "execution_risk",
+        "field": "domain_expertise_gap",
+        "value": "No full-time clinical leadership; advisors part-time",
+        "confidence": 0.8,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "product_readiness",
+        "field": "stage",
+        "value": "production",
+        "confidence": 0.9,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "technical_moat",
+        "field": "proprietary_data",
+        "value": "500K de-identified patient encounters from pilots",
+        "confidence": 0.75,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "differentiation",
+        "field": "accuracy",
+        "value": "92% concordance with specialist diagnoses in pilots",
+        "confidence": 0.7,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "market_scope",
+        "field": "tam",
+        "value": 12000000000,
+        "confidence": 0.65,
+        "polarity": "supportive",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "market_scope",
+        "field": "market_timing",
+        "value": "Post-COVID telehealth adoption accelerating AI interest",
+        "confidence": 0.75,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "regulatory_risk",
+        "field": "fda_status",
+        "value": "Pre-submission meeting scheduled; Class II 510(k) pathway",
+        "confidence": 0.85,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "regulatory_risk",
+        "field": "clearance_timeline",
+        "value": "12-18 months estimated",
+        "confidence": 0.6,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "regulatory_risk",
+        "field": "hipaa_compliance",
+        "value": "SOC 2 Type II certified, HIPAA BAAs in place",
+        "confidence": 0.9,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "business_model",
+        "field": "revenue_model",
+        "value": "$500/physician/month SaaS",
+        "confidence": 0.85,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "business_model",
+        "field": "sales_cycle",
+        "value": "6-9 months average",
+        "confidence": 0.75,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "business_model",
+        "field": "gross_margin",
+        "value": 0.75,
+        "confidence": 0.8,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "capital_intensity",
+        "field": "monthly_burn",
+        "value": 120000,
+        "confidence": 0.85,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "capital_intensity",
+        "field": "runway_months",
+        "value": 18,
+        "confidence": 0.8,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "use_of_proceeds",
+        "field": "allocation",
+        "value": "40% R&D, 35% Sales, 15% Regulatory, 10% G&A",
+        "confidence": 0.85,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "differentiation",
+        "field": "competitors",
+        "value": "Nuance (Microsoft), Isabel Healthcare, Infermedica",
+        "confidence": 0.85,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "execution_risk",
+        "field": "competitive_threat",
+        "value": "Microsoft Nuance has 500x resources; unclear differentiation path",
+        "confidence": 0.7,
+        "polarity": "risk"
+      },
+      {
+        "claim_type": "exit_logic",
+        "field": "potential_acquirers",
+        "value": [
+          "Epic",
+          "Cerner (Oracle)",
+          "Veeva",
+          "Teladoc"
+        ],
+        "confidence": 0.6,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "exit_logic",
+        "field": "comparable_exits",
+        "value": "Buoy Health ($75M), K Health ($132M valuation)",
+        "confidence": 0.65,
+        "polarity": "neutral"
+      }
+    ]
+  }
+}

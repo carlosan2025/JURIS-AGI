@@ -99,3 +99,4 @@ logs/
 runs/traces/
 runs/results/
 !runs/.gitkeep
+web/node_modules/

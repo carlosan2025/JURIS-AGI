@@ -1,0 +1,25 @@
+{
+  "historical_deals": [
+    {
+      "company_id": "cloudmetrics-2023",
+      "company_name": "CloudMetrics Inc.",
+      "sector": "Enterprise SaaS",
+      "stage": "Series A",
+      "outcome": "invest"
+    },
+    {
+      "company_id": "cryptolend-2023",
+      "company_name": "CryptoLend Finance",
+      "sector": "Crypto/DeFi",
+      "stage": "Seed",
+      "outcome": "pass"
+    },
+    {
+      "company_id": "quantumsense-2024",
+      "company_name": "QuantumSense AI",
+      "sector": "Deep Tech / AI",
+      "stage": "Series A",
+      "outcome": "invest"
+    }
+  ]
+}

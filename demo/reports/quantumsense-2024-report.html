@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Decision Report: QuantumSense AI Inc.</title>
+    <style>
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .report-header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .report-header h1 { font-size: 28px; margin-bottom: 10px; }
+        .report-meta { font-size: 14px; opacity: 0.9; }
+        .toc {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .toc h2 { font-size: 16px; margin-bottom: 10px; color: #666; }
+        .toc ul { list-style: none; display: flex; flex-wrap: wrap; gap: 15px; }
+        .toc a { color: #2d5a87; text-decoration: none; font-size: 14px; }
+        .toc a:hover { text-decoration: underline; }
+        main { padding: 40px; }
+        section { margin-bottom: 40px; }
+        section h2 {
+            font-size: 22px;
+            color: #1e3a5f;
+            border-bottom: 2px solid #2d5a87;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        section h3 {
+            font-size: 18px;
+            color: #333;
+            margin: 20px 0 10px;
+        }
+        .decision-box {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .decision-invest { background: #e8f5e9; border: 2px solid #4caf50; }
+        .decision-pass { background: #ffebee; border: 2px solid #f44336; }
+        .decision-defer { background: #fff8e1; border: 2px solid #ff9800; }
+        .decision-badge {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 4px;
+            color: white;
+        }
+        .decision-invest .decision-badge { background: #4caf50; }
+        .decision-pass .decision-badge { background: #f44336; }
+        .decision-defer .decision-badge { background: #ff9800; }
+        .confidence-bar {
+            flex: 1;
+            background: #e0e0e0;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2d5a87 0%, #4caf50 100%);
+            transition: width 0.3s ease;
+        }
+        .key-points { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .key-points-box {
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .strengths { background: #e8f5e9; border-left: 4px solid #4caf50; }
+        .risks { background: #ffebee; border-left: 4px solid #f44336; }
+        .key-points-box h4 { font-size: 14px; color: #666; margin-bottom: 10px; }
+        .key-points-box ul { margin-left: 20px; }
+        .key-points-box li { font-size: 14px; margin-bottom: 5px; }
+        .evidence-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin: 15px 0;
+        }
+        .evidence-table th, .evidence-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .evidence-table th { background: #f5f5f5; font-weight: 600; }
+        .polarity-supportive { color: #2e7d32; }
+        .polarity-risk { color: #c62828; }
+        .polarity-neutral { color: #666; }
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .stat-value { font-size: 28px; font-weight: bold; color: #1e3a5f; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+        .rule-eval {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .rule-header { display: flex; justify-content: space-between; align-items: center; }
+        .rule-name { font-weight: 600; }
+        .rule-result {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .rule-pass { background: #e8f5e9; color: #2e7d32; }
+        .rule-fail { background: #ffebee; color: #c62828; }
+        .rule-partial { background: #fff8e1; color: #f57c00; }
+        .sensitivity-item {
+            padding: 15px;
+            border-left: 4px solid #ff9800;
+            background: #fff8e1;
+            margin-bottom: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+        .sensitivity-header { font-weight: 600; margin-bottom: 5px; }
+        .sensitivity-explanation { font-size: 14px; color: #666; }
+        .uncertainty-meter {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .uncertainty-item {
+            flex: 1;
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .uncertainty-label { font-size: 12px; color: #666; margin-bottom: 5px; }
+        .uncertainty-value { font-size: 24px; font-weight: bold; color: #1e3a5f; }
+        .data-gaps {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .data-gaps h4 { color: #e65100; margin-bottom: 10px; }
+        .data-gaps ul { margin-left: 20px; }
+        .recommendations {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .recommendations h4 { color: #1565c0; margin-bottom: 10px; }
+        .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .metadata-item { font-size: 14px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .metadata-label { color: #666; }
+        .metadata-value { font-weight: 500; }
+        .report-footer {
+            background: #1e3a5f;
+            color: white;
+            padding: 30px 40px;
+        }
+        .disclaimer {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+        .footer-meta { font-size: 12px; opacity: 0.8; text-align: center; }
+        @media print {
+            .container { box-shadow: none; }
+            .toc { break-after: page; }
+            section { break-inside: avoid; }
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="report-header">
+            <h1>Investment Decision Report: QuantumSense AI Inc.</h1>
+            <div class="report-meta">
+                Generated: 2026-01-12 20:23 UTC
+                | Report ID: report_c92a00c8573b
+            </div>
+        </header>
+
+        <nav class="toc">
+            <h2>Contents</h2>
+            <ul>
+                <li><a href="#executive-summary">Executive Summary</a></li>
+                <li><a href="#decision-logic">Inferred Decision Logic</a></li>
+                <li><a href="#evidence-basis">Evidence Basis</a></li>
+                <li><a href="#deal-evaluation">Deal Evaluation</a></li>
+                <li><a href="#counterfactual-analysis">Counterfactual & Sensitivity Analysis</a></li>
+                <li><a href="#uncertainty">Uncertainty & Limitations</a></li>
+                <li><a href="#audit-metadata">Audit Metadata</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            
+        <section id="executive-summary">
+            <h2>1. Executive Summary</h2>
+
+            <div class="decision-box decision-invest">
+                <span class="decision-badge">INVEST</span>
+                <div style="flex: 1;">
+                    <div style="font-size: 14px; color: #666; margin-bottom: 5px;">
+                        Confidence: 90% (high)
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: 90.38461538461539%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="font-size: 18px; margin-bottom: 20px; font-weight: 500;">
+                Recommend INVEST in QuantumSense AI Inc. with high confidence (90%).
+            </p>
+
+            <div class="key-points">
+                <div class="key-points-box strengths">
+                    <h4>Key Strengths</h4>
+                    <ul>
+                        <li>traction: arr (800000)</li><li>traction: pilot_customers (8)</li><li>traction: enterprise_pipeline (5000000)</li><li>team_quality: founder_background (Stanford ML PhD, ex-Google Brain research scientist)</li><li>team_quality: publications (15 peer-reviewed papers, 3000+ citations)</li>
+                    </ul>
+                </div>
+                <div class="key-points-box risks">
+                    <h4>Key Risks</h4>
+                    <ul>
+                        
+                    </ul>
+                </div>
+            </div>
+
+            
+
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <p style="font-size: 14px; line-height: 1.7;">
+                    Based on the evidence analyzed, this deal presents a compelling investment opportunity with 90% confidence. Key strengths include: traction: arr (800000); traction: pilot_customers (8); traction: enterprise_pipeline (5000000). DISCLAIMER: This is decision support only, not investment advice. Final investment decisions remain the responsibility of the investment committee.
+                </p>
+            </div>
+        </section>
+        
+            
+        <section id="decision-logic">
+            <h2>2. Inferred Decision Logic</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-value">+8.18</div>
+                    <div class="stat-label">Net Signal Score</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Primary Factors</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Rules Evaluated</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Rules Passed</div>
+                </div>
+            </div>
+
+            <h3>Decision Threshold</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
+                Net signal score (8.18) exceeds positive threshold. Supportive evidence outweighs identified risks.
+            </p>
+
+            <h3>Rule Evaluations</h3>
+            
+            <div class="rule-eval">
+                <div class="rule-header">
+                    <span class="rule-name">Traction Assessment</span>
+                    <span class="rule-result rule-pass">PASS</span>
+                </div>
+                <p style="font-size: 13px; color: #666; margin-top: 5px;">Evaluate revenue traction and growth metrics</p>
+                <p style="font-size: 12px; color: #888; margin-top: 5px;">
+                    Evidence: traction.arr, traction.pilot_customers, traction.enterprise_pipeline
+                </p>
+            </div>
+            
+            <div class="rule-eval">
+                <div class="rule-header">
+                    <span class="rule-name">Team Assessment</span>
+                    <span class="rule-result rule-pass">PASS</span>
+                </div>
+                <p style="font-size: 13px; color: #666; margin-top: 5px;">Assess founder and team quality</p>
+                <p style="font-size: 12px; color: #888; margin-top: 5px;">
+                    Evidence: team_quality.founder_background, team_quality.publications
+                </p>
+            </div>
+            
+            <div class="rule-eval">
+                <div class="rule-header">
+                    <span class="rule-name">Market Assessment</span>
+                    <span class="rule-result rule-pass">PASS</span>
+                </div>
+                <p style="font-size: 13px; color: #666; margin-top: 5px;">Evaluate market opportunity and timing</p>
+                <p style="font-size: 12px; color: #888; margin-top: 5px;">
+                    Evidence: market_scope.tam
+                </p>
+            </div>
+            
+            <div class="rule-eval">
+                <div class="rule-header">
+                    <span class="rule-name">Technical Assessment</span>
+                    <span class="rule-result rule-pass">PASS</span>
+                </div>
+                <p style="font-size: 13px; color: #666; margin-top: 5px;">Evaluate product readiness and technical moat</p>
+                <p style="font-size: 12px; color: #888; margin-top: 5px;">
+                    Evidence: technical_moat.patents_filed, technical_moat.proprietary_data
+                </p>
+            </div>
+            
+
+            <h3>Decision Rationale</h3>
+            <p style="font-size: 14px; background: #f5f5f5; padding: 15px; border-radius: 8px;">
+                The decision to INVEST is supported by a positive net signal score (8.18) derived from 13 evidence claims.
+            </p>
+        </section>
+        
+            
+        <section id="evidence-basis">
+            <h2>3. Evidence Basis</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-value">13</div>
+                    <div class="stat-label">Total Claims</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" style="color: #2e7d32;">10</div>
+                    <div class="stat-label">Supportive</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" style="color: #c62828;">0</div>
+                    <div class="stat-label">Risk</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">85%</div>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+            </div>
+
+            <h3>Supportive Evidence</h3>
+            
+            <table class="evidence-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Field</th>
+                        <th>Value</th>
+                        <th>Confidence</th>
+                        <th>Polarity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>traction</td>
+                    <td>arr</td>
+                    <td>800000</td>
+                    <td>88%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>traction</td>
+                    <td>pilot_customers</td>
+                    <td>8</td>
+                    <td>90%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>traction</td>
+                    <td>enterprise_pipeline</td>
+                    <td>5000000</td>
+                    <td>70%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>team_quality</td>
+                    <td>founder_background</td>
+                    <td>Stanford ML PhD, ex-Google Brain research scientis</td>
+                    <td>95%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>team_quality</td>
+                    <td>publications</td>
+                    <td>15 peer-reviewed papers, 3000+ citations</td>
+                    <td>90%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>technical_moat</td>
+                    <td>patents_filed</td>
+                    <td>4</td>
+                    <td>95%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>technical_moat</td>
+                    <td>proprietary_data</td>
+                    <td>50M labeled industrial sensor readings</td>
+                    <td>80%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>differentiation</td>
+                    <td>benchmark_performance</td>
+                    <td>3x accuracy vs GPT-4 on industrial anomaly detecti</td>
+                    <td>75%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>market_scope</td>
+                    <td>tam</td>
+                    <td>8000000000</td>
+                    <td>70%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                
+                <tr>
+                    <td>exit_logic</td>
+                    <td>potential_acquirers</td>
+                    <td>[&#x27;Siemens&#x27;, &#x27;Honeywell&#x27;, &#x27;Rockwell Automation&#x27;, &#x27;M</td>
+                    <td>65%</td>
+                    <td class="polarity-supportive">supportive</td>
+                </tr>
+                </tbody>
+            </table>
+            
+
+            <h3>Risk Evidence</h3>
+            <p style='color: #666; font-style: italic;'>No risk claims.</p>
+
+            <h3>Neutral Evidence</h3>
+            
+            <table class="evidence-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Field</th>
+                        <th>Value</th>
+                        <th>Confidence</th>
+                        <th>Polarity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>company_identity</td>
+                    <td>legal_name</td>
+                    <td>QuantumSense AI Inc.</td>
+                    <td>100%</td>
+                    <td class="polarity-neutral">neutral</td>
+                </tr>
+                
+                <tr>
+                    <td>round_terms</td>
+                    <td>pre_money_valuation</td>
+                    <td>40000000</td>
+                    <td>95%</td>
+                    <td class="polarity-neutral">neutral</td>
+                </tr>
+                
+                <tr>
+                    <td>round_terms</td>
+                    <td>raise_amount</td>
+                    <td>10000000</td>
+                    <td>95%</td>
+                    <td class="polarity-neutral">neutral</td>
+                </tr>
+                </tbody>
+            </table>
+            
+
+            
+        </section>
+        
+            
+        <section id="deal-evaluation">
+            <h2>4. Deal Evaluation</h2>
+
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <span style="color: #666; font-size: 12px;">Company</span>
+                        <p style="font-weight: 600; font-size: 18px;">QuantumSense AI Inc.</p>
+                    </div>
+                    <div>
+                        <span style="color: #666; font-size: 12px;">Company ID</span>
+                        <p style="font-family: monospace;">quantumsense-2024</p>
+                    </div>
+                    <div>
+                        <span style="color: #666; font-size: 12px;">Sector</span>
+                        <p>Not specified</p>
+                    </div>
+                    <div>
+                        <span style="color: #666; font-size: 12px;">Stage</span>
+                        <p>Not specified</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Category Summaries</h3>
+            
+                <div style="margin-bottom: 15px;">
+                    <h4 style="font-size: 14px; color: #666; margin-bottom: 5px;">Traction</h4>
+                    <p style="font-size: 14px; background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                        arr: 800000; pilot_customers: 8; enterprise_pipeline: 5000000
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <h4 style="font-size: 14px; color: #666; margin-bottom: 5px;">Team</h4>
+                    <p style="font-size: 14px; background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                        founder_background: Stanford ML PhD, ex-Google Brain research scientist; publications: 15 peer-reviewed papers, 3000+ citations
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <h4 style="font-size: 14px; color: #666; margin-bottom: 5px;">Market</h4>
+                    <p style="font-size: 14px; background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                        tam: 8000000000
+                    </p>
+                </div>
+                
+        </section>
+        
+            
+        <section id="counterfactual-analysis">
+            <h2>5. Counterfactual & Sensitivity Analysis</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Robustness Score</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Stability Margin</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">20</div>
+                    <div class="stat-label">CFs Tested</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Flips Found</div>
+                </div>
+            </div>
+
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="font-size: 14px;">The decision is highly stable with a robustness score of 100%. 0 of 20 counterfactuals (0%) resulted in decision flips. The decision is robust to most reasonable changes in evidence.</p>
+            </div>
+
+            <h3>Critical Claims</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                Claims most likely to flip the decision if changed:
+            </p>
+            <p style="color: #666;">No critical claims identified.</p>
+
+            <h3>Decision Flip Scenarios</h3>
+            <p style="color: #666;">No decision flip scenarios found.</p>
+        </section>
+        
+            
+        <section id="uncertainty">
+            <h2>6. Uncertainty & Limitations</h2>
+
+            <div class="uncertainty-meter">
+                <div class="uncertainty-item">
+                    <div class="uncertainty-label">Epistemic Uncertainty</div>
+                    <div class="uncertainty-value">20%</div>
+                    <div style="font-size: 11px; color: #888;">Reducible with more data</div>
+                </div>
+                <div class="uncertainty-item">
+                    <div class="uncertainty-label">Aleatoric Uncertainty</div>
+                    <div class="uncertainty-value">15%</div>
+                    <div style="font-size: 11px; color: #888;">Inherent randomness</div>
+                </div>
+                <div class="uncertainty-item">
+                    <div class="uncertainty-label">Confidence Level</div>
+                    <div class="uncertainty-value">MEDIUM</div>
+                    <div style="font-size: 11px; color: #888;">Overall assessment</div>
+                </div>
+            </div>
+
+            
+            <div class="data-gaps">
+                <h4>Data Gaps</h4>
+                <ul>
+                    <li>No business model claims provided</li><li>Limited evidence for company identity (only 1 claim)</li><li>Limited evidence for differentiation (only 1 claim)</li><li>Limited evidence for market scope (only 1 claim)</li>
+                </ul>
+            </div>
+            
+            
+            <div class="recommendations">
+                <h4>Recommendations for Due Diligence</h4>
+                <ul>
+                    <li>Standard due diligence processes recommended</li>
+                </ul>
+            </div>
+            
+
+            <h3>Key Assumptions</h3>
+            <ul style="margin-left: 20px; margin-bottom: 20px;">
+                <li style="font-size: 14px; margin-bottom: 5px;">Evidence provided is accurate and current</li><li style="font-size: 14px; margin-bottom: 5px;">Market conditions remain stable during analysis period</li><li style="font-size: 14px; margin-bottom: 5px;">No material undisclosed information exists</li><li style="font-size: 14px; margin-bottom: 5px;">Historical performance is indicative of future potential</li>
+            </ul>
+
+            <h3>Limitations</h3>
+            <ul style="margin-left: 20px;">
+                <li style="font-size: 14px; margin-bottom: 5px;">This analysis is decision support only, not investment advice</li><li style="font-size: 14px; margin-bottom: 5px;">Confidence scores reflect model uncertainty, not success probability</li><li style="font-size: 14px; margin-bottom: 5px;">Analysis is based solely on provided evidence</li><li style="font-size: 14px; margin-bottom: 5px;">External factors not in evidence graph are not considered</li>
+            </ul>
+        </section>
+        
+            
+        <section id="audit-metadata">
+            <h2>7. Audit Metadata</h2>
+
+            <div class="metadata-grid">
+                <div class="metadata-item">
+                    <span class="metadata-label">Report ID:</span>
+                    <span class="metadata-value" style="font-family: monospace;">report_c92a00c8573b</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Generated At:</span>
+                    <span class="metadata-value">2026-01-12 20:23:54 UTC</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Model Version:</span>
+                    <span class="metadata-value">1.0.0</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Trace ID:</span>
+                    <span class="metadata-value" style="font-family: monospace;">N/A</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Analyst ID:</span>
+                    <span class="metadata-value">N/A</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Claims Analyzed:</span>
+                    <span class="metadata-value">13</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Counterfactuals Tested:</span>
+                    <span class="metadata-value">20</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Reproducibility Seed:</span>
+                    <span class="metadata-value">42</span>
+                </div>
+            </div>
+        </section>
+        
+        </main>
+
+        <footer class="report-footer">
+            <div class="disclaimer">
+                <strong>DISCLAIMER:</strong> This report is decision support only, not investment advice.
+                All investment decisions remain the sole responsibility of the investment committee.
+                Confidence scores reflect model uncertainty, not probability of investment success.
+            </div>
+            <div class="footer-meta">
+                JURIS-AGI VC Decision Intelligence | Model Version: 1.0.0
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

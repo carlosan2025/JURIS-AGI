@@ -35,6 +35,11 @@ from .models import (
 )
 from .local_config import get_local_config, LocalPoCConfig, is_local_poc_mode
 
+# Evidence extraction models
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from enum import Enum
+
 # Optional Redis
 try:
     import redis
@@ -545,6 +550,509 @@ def save_result(
 
     logger.info(f"Saved result to {result_path}")
     return result_path
+
+
+# =============================================================================
+# Evidence Extraction Models
+# =============================================================================
+
+class DocumentTypeEnum(str, Enum):
+    """Supported document types for extraction."""
+    PITCH_DECK = "pitch_deck"
+    FINANCIAL_MODEL = "financial_model"
+    TECH_DESCRIPTION = "tech_description"
+    IC_MEMO = "ic_memo"
+
+
+class ExtractionRequest(BaseModel):
+    """Request to extract claims from a document."""
+    doc_id: str = Field(..., description="Unique identifier for the document")
+    doc_type: DocumentTypeEnum = Field(..., description="Type of document")
+    content: str = Field(..., description="Text content of the document")
+    company_id: Optional[str] = Field(None, description="Associated company ID")
+
+
+class ClaimStatusEnum(str, Enum):
+    """Status of a proposed claim."""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    MODIFIED = "modified"
+
+
+class ProposedClaimResponse(BaseModel):
+    """A proposed claim from extraction."""
+    proposal_id: str
+    claim_type: str
+    field: str
+    value: Any
+    confidence: float
+    polarity: str
+    locator: Optional[str] = None
+    quote: Optional[str] = None
+    rationale: str
+    status: ClaimStatusEnum = ClaimStatusEnum.PENDING
+
+
+class ExtractionResponse(BaseModel):
+    """Response from document extraction."""
+    doc_id: str
+    doc_type: str
+    proposed_claims: List[ProposedClaimResponse] = []
+    extraction_time_seconds: float = 0.0
+    errors: List[str] = []
+    success: bool = True
+
+
+class ClaimReviewRequest(BaseModel):
+    """Request to review a proposed claim."""
+    proposal_id: str
+    action: str = Field(..., description="approve, reject, or modify")
+    modified_value: Optional[Any] = None
+    modified_confidence: Optional[float] = None
+    modified_polarity: Optional[str] = None
+    reviewer_notes: Optional[str] = None
+
+
+class MergeClaimsRequest(BaseModel):
+    """Request to merge approved claims into evidence graph."""
+    company_id: str
+    proposal_ids: List[str]
+
+
+# In-memory storage for extraction results (for demo/PoC)
+_extraction_results: Dict[str, Dict[str, Any]] = {}
+_proposed_claims: Dict[str, Dict[str, Any]] = {}
+
+
+# =============================================================================
+# Evidence Extraction Endpoints
+# =============================================================================
+
+@app.post("/extract", response_model=ExtractionResponse, tags=["Evidence Extraction"])
+async def extract_claims(request: ExtractionRequest):
+    """
+    Extract evidence claims from a document using LLM.
+
+    Returns proposed claims that require human review before
+    being added to the evidence graph.
+    """
+    from ..evidence.extractors import (
+        get_extractor,
+        ExtractionConfig,
+        create_mock_llm_fn,
+    )
+
+    # Create extractor with mock LLM (for PoC without API key)
+    # In production, this would use a real LLM function
+    config = ExtractionConfig(
+        enabled=True,
+        min_confidence=0.3,
+        max_claims_per_type=10,
+    )
+
+    # Use mock LLM for demo (replace with real LLM in production)
+    llm_fn = create_mock_llm_fn()
+
+    extractor = get_extractor(request.doc_type.value, config, llm_fn)
+
+    if extractor is None:
+        return ExtractionResponse(
+            doc_id=request.doc_id,
+            doc_type=request.doc_type.value,
+            errors=[f"Unknown document type: {request.doc_type}"],
+            success=False,
+        )
+
+    # Run extraction
+    result = extractor.extract(request.content, request.doc_id)
+
+    # Store proposals for later review
+    for proposal in result.proposed_claims:
+        _proposed_claims[proposal.proposal_id] = proposal.to_dict()
+        _proposed_claims[proposal.proposal_id]["company_id"] = request.company_id
+
+    # Store extraction result
+    _extraction_results[request.doc_id] = result.to_dict()
+
+    # Convert to response
+    proposed_claims = []
+    for pc in result.proposed_claims:
+        proposed_claims.append(ProposedClaimResponse(
+            proposal_id=pc.proposal_id,
+            claim_type=pc.claim_type.value,
+            field=pc.field,
+            value=pc.value,
+            confidence=pc.confidence,
+            polarity=pc.polarity.value,
+            locator=pc.source.locator if pc.source else None,
+            quote=pc.source.quote if pc.source else None,
+            rationale=pc.rationale,
+            status=ClaimStatusEnum(pc.status.value),
+        ))
+
+    return ExtractionResponse(
+        doc_id=result.doc_id,
+        doc_type=result.doc_type,
+        proposed_claims=proposed_claims,
+        extraction_time_seconds=result.extraction_time_seconds,
+        errors=result.errors,
+        success=result.success,
+    )
+
+
+@app.get("/extract/{doc_id}", response_model=ExtractionResponse, tags=["Evidence Extraction"])
+async def get_extraction_result(doc_id: str):
+    """Get extraction result for a document."""
+    if doc_id not in _extraction_results:
+        raise HTTPException(404, f"Extraction result for {doc_id} not found")
+
+    result_data = _extraction_results[doc_id]
+
+    # Rebuild proposed claims with current status
+    proposed_claims = []
+    for pc_data in result_data.get("proposed_claims", []):
+        proposal_id = pc_data["proposal_id"]
+        # Get latest status from proposals store
+        if proposal_id in _proposed_claims:
+            pc_data = _proposed_claims[proposal_id]
+
+        proposed_claims.append(ProposedClaimResponse(
+            proposal_id=pc_data["proposal_id"],
+            claim_type=pc_data["claim_type"],
+            field=pc_data["field"],
+            value=pc_data["value"],
+            confidence=pc_data["confidence"],
+            polarity=pc_data["polarity"],
+            locator=pc_data.get("source", {}).get("locator") if pc_data.get("source") else None,
+            quote=pc_data.get("source", {}).get("quote") if pc_data.get("source") else None,
+            rationale=pc_data.get("rationale", ""),
+            status=ClaimStatusEnum(pc_data.get("status", "pending")),
+        ))
+
+    return ExtractionResponse(
+        doc_id=result_data["doc_id"],
+        doc_type=result_data["doc_type"],
+        proposed_claims=proposed_claims,
+        extraction_time_seconds=result_data.get("extraction_time_seconds", 0),
+        errors=result_data.get("errors", []),
+        success=len(result_data.get("errors", [])) == 0,
+    )
+
+
+@app.post("/extract/review", tags=["Evidence Extraction"])
+async def review_claim(request: ClaimReviewRequest):
+    """
+    Review a proposed claim (approve, reject, or modify).
+
+    Human review is required before claims can be merged.
+    """
+    if request.proposal_id not in _proposed_claims:
+        raise HTTPException(404, f"Proposal {request.proposal_id} not found")
+
+    proposal = _proposed_claims[request.proposal_id]
+
+    if request.action == "approve":
+        proposal["status"] = "approved"
+        proposal["reviewer_notes"] = request.reviewer_notes
+    elif request.action == "reject":
+        proposal["status"] = "rejected"
+        proposal["reviewer_notes"] = request.reviewer_notes
+    elif request.action == "modify":
+        proposal["status"] = "modified"
+        if request.modified_value is not None:
+            proposal["modified_value"] = request.modified_value
+        if request.modified_confidence is not None:
+            proposal["modified_confidence"] = request.modified_confidence
+        if request.modified_polarity is not None:
+            proposal["modified_polarity"] = request.modified_polarity
+        proposal["reviewer_notes"] = request.reviewer_notes
+    else:
+        raise HTTPException(400, f"Invalid action: {request.action}")
+
+    proposal["reviewed_at"] = datetime.utcnow().isoformat()
+    _proposed_claims[request.proposal_id] = proposal
+
+    return {"status": "success", "proposal": proposal}
+
+
+@app.post("/extract/merge", tags=["Evidence Extraction"])
+async def merge_claims(request: MergeClaimsRequest):
+    """
+    Merge approved claims into evidence graph.
+
+    Only approved or modified claims can be merged.
+    Human-approved claims are NEVER overwritten.
+    """
+    from ..evidence.extractors import ProposedClaim, ExtractionStatus
+    from ..evidence.schema import EvidenceGraph, Claim
+
+    merged = []
+    errors = []
+
+    for proposal_id in request.proposal_ids:
+        if proposal_id not in _proposed_claims:
+            errors.append(f"Proposal {proposal_id} not found")
+            continue
+
+        proposal_data = _proposed_claims[proposal_id]
+        status = proposal_data.get("status", "pending")
+
+        if status not in ("approved", "modified"):
+            errors.append(f"Proposal {proposal_id} is not approved (status: {status})")
+            continue
+
+        # Convert to claim
+        try:
+            proposal = ProposedClaim.from_dict(proposal_data)
+            claim = proposal.to_claim()
+            merged.append(claim.to_dict())
+
+            # Mark as merged
+            proposal_data["status"] = "merged"
+            _proposed_claims[proposal_id] = proposal_data
+
+        except Exception as e:
+            errors.append(f"Failed to convert proposal {proposal_id}: {str(e)}")
+
+    return {
+        "company_id": request.company_id,
+        "merged_count": len(merged),
+        "merged_claims": merged,
+        "errors": errors,
+    }
+
+
+@app.get("/extract/supported-types", tags=["Evidence Extraction"])
+async def get_supported_document_types():
+    """Get list of supported document types for extraction."""
+    from ..evidence.extractors import ExtractorRegistry
+
+    return {
+        "types": ExtractorRegistry.list_supported_types(),
+        "aliases": ExtractorRegistry.get_type_aliases(),
+    }
+
+
+# =============================================================================
+# Decision Report Endpoints
+# =============================================================================
+
+# In-memory storage for analysis results (for demo/PoC)
+_analysis_results: Dict[str, Dict[str, Any]] = {}
+
+
+@app.post("/vc/analyze", tags=["VC Analysis"])
+async def analyze_evidence_graph(evidence_graph: Dict[str, Any]):
+    """
+    Submit an evidence graph for VC decision analysis.
+
+    Returns a job_id that can be used to retrieve the report.
+    """
+    from ..vc.decision_analysis import DecisionAnalyzer, DecisionOutcome
+    from ..vc.trace import VCDecisionTrace
+    from ..evidence.schema import EvidenceGraph, Claim, Polarity as EvidencePolarity
+    from ..evidence.ontology import ClaimType
+    from ..config import get_config
+
+    config = get_config()
+    job_id = f"vc_{uuid.uuid4().hex[:12]}"
+
+    try:
+        # Parse evidence graph
+        company_id = evidence_graph.get("company_id", "unknown")
+        claims_data = evidence_graph.get("claims", [])
+
+        # Convert to internal format
+        claims = []
+        for c in claims_data:
+            try:
+                claim_type = ClaimType(c.get("claim_type", "company_identity"))
+            except ValueError:
+                claim_type = ClaimType.COMPANY_IDENTITY
+
+            try:
+                polarity = EvidencePolarity(c.get("polarity", "neutral"))
+            except ValueError:
+                polarity = EvidencePolarity.NEUTRAL
+
+            claims.append(Claim(
+                claim_type=claim_type,
+                field=c.get("field", ""),
+                value=c.get("value"),
+                confidence=c.get("confidence", 0.5),
+                polarity=polarity,
+            ))
+
+        graph = EvidenceGraph(company_id=company_id, claims=claims)
+
+        # Define simple decision function
+        def decision_fn(g: EvidenceGraph):
+            supportive = sum(1 for c in g.claims if c.polarity == EvidencePolarity.SUPPORTIVE)
+            risk = sum(1 for c in g.claims if c.polarity == EvidencePolarity.RISK)
+            total = len(g.claims) or 1
+
+            support_ratio = supportive / total
+            risk_ratio = risk / total
+
+            if support_ratio > 0.5 and risk_ratio < 0.3:
+                decision = DecisionOutcome.INVEST
+                confidence = 0.75 + support_ratio * 0.2
+            elif risk_ratio > 0.4:
+                decision = DecisionOutcome.PASS
+                confidence = 0.6 + risk_ratio * 0.3
+            else:
+                decision = DecisionOutcome.DEFER
+                confidence = 0.5
+
+            return decision, min(confidence, 0.95)
+
+        # Run analysis
+        analyzer = DecisionAnalyzer(
+            decision_fn=decision_fn,
+            seed=config.random_seed,
+            num_counterfactuals=config.num_counterfactuals,
+        )
+        result = analyzer.analyze(graph)
+
+        # Create trace
+        trace = VCDecisionTrace.from_analysis_result(company_id, result)
+
+        # Store result
+        _analysis_results[job_id] = {
+            "job_id": job_id,
+            "company_id": company_id,
+            "evidence_graph": evidence_graph,
+            "trace": trace.to_dict(),
+            "decision": result.decision.value,
+            "confidence": result.confidence,
+            "status": "completed",
+            "created_at": datetime.utcnow().isoformat(),
+        }
+
+        return {
+            "job_id": job_id,
+            "status": "completed",
+            "decision": result.decision.value,
+            "confidence": result.confidence,
+        }
+
+    except Exception as e:
+        logger.exception(f"Analysis failed for job {job_id}")
+        _analysis_results[job_id] = {
+            "job_id": job_id,
+            "status": "failed",
+            "error": str(e),
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        raise HTTPException(500, f"Analysis failed: {str(e)}")
+
+
+@app.get("/vc/jobs/{job_id}", tags=["VC Analysis"])
+async def get_vc_job(job_id: str):
+    """Get VC analysis job status and result."""
+    if job_id not in _analysis_results:
+        raise HTTPException(404, f"Job {job_id} not found")
+
+    return _analysis_results[job_id]
+
+
+@app.get("/vc/jobs/{job_id}/report", tags=["VC Analysis"])
+async def get_decision_report(
+    job_id: str,
+    format: str = Query(default="html", description="Report format: html, md, or pdf"),
+):
+    """
+    Generate and return a formal decision report.
+
+    Args:
+        job_id: The analysis job ID
+        format: Output format (html, md, pdf)
+
+    Returns:
+        Rendered report in requested format
+    """
+    from ..report import generate_report, render_html, render_markdown, render_pdf
+    from ..config import get_config
+    from fastapi.responses import Response
+
+    if job_id not in _analysis_results:
+        raise HTTPException(404, f"Job {job_id} not found")
+
+    job_data = _analysis_results[job_id]
+
+    if job_data.get("status") != "completed":
+        raise HTTPException(400, f"Job {job_id} is not completed (status: {job_data.get('status')})")
+
+    config = get_config()
+
+    # Generate report
+    report = generate_report(
+        evidence_graph=job_data["evidence_graph"],
+        trace=job_data["trace"],
+        final_decision=job_data["decision"],
+        seed=config.random_seed,
+    )
+
+    # Render in requested format
+    format_lower = format.lower()
+    if format_lower == "html":
+        content = render_html(report)
+        return Response(content=content, media_type="text/html")
+    elif format_lower in ("md", "markdown"):
+        content = render_markdown(report)
+        return Response(content=content, media_type="text/markdown")
+    elif format_lower == "pdf":
+        content = render_pdf(report)
+        if isinstance(content, bytes):
+            return Response(content=content, media_type="application/pdf")
+        else:
+            # Fallback to HTML if PDF rendering not available
+            return Response(content=content, media_type="text/html")
+    else:
+        raise HTTPException(400, f"Unsupported format: {format}. Use html, md, or pdf.")
+
+
+@app.post("/vc/report/generate", tags=["VC Analysis"])
+async def generate_report_direct(
+    evidence_graph: Dict[str, Any],
+    trace: Dict[str, Any],
+    decision: str,
+    format: str = Query(default="html"),
+):
+    """
+    Generate a report directly from evidence graph and trace.
+
+    This endpoint bypasses the job system for direct report generation.
+    """
+    from ..report import generate_report, render_html, render_markdown, render_pdf
+    from ..config import get_config
+    from fastapi.responses import Response
+
+    config = get_config()
+
+    report = generate_report(
+        evidence_graph=evidence_graph,
+        trace=trace,
+        final_decision=decision,
+        seed=config.random_seed,
+    )
+
+    format_lower = format.lower()
+    if format_lower == "html":
+        content = render_html(report)
+        return Response(content=content, media_type="text/html")
+    elif format_lower in ("md", "markdown"):
+        content = render_markdown(report)
+        return Response(content=content, media_type="text/markdown")
+    elif format_lower == "pdf":
+        content = render_pdf(report)
+        if isinstance(content, bytes):
+            return Response(content=content, media_type="application/pdf")
+        else:
+            return Response(content=content, media_type="text/html")
+    else:
+        raise HTTPException(400, f"Unsupported format: {format}")
 
 
 # =============================================================================

@@ -1,0 +1,6 @@
+{
+  "/audit/page": "app/audit/page.js",
+  "/page": "app/page.js",
+  "/analyze/page": "app/analyze/page.js",
+  "/extract/page": "app/extract/page.js"
+}

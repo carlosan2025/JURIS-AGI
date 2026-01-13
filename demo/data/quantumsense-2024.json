@@ -1,0 +1,114 @@
+{
+  "company_id": "quantumsense-2024",
+  "company_name": "QuantumSense AI",
+  "sector": "Deep Tech / AI",
+  "stage": "Series A",
+  "outcome": "invest",
+  "outcome_rationale": "Defensible technology, strong team, clear enterprise demand",
+  "evidence_graph": {
+    "company_id": "quantumsense-2024",
+    "claims": [
+      {
+        "claim_type": "company_identity",
+        "field": "legal_name",
+        "value": "QuantumSense AI Inc.",
+        "confidence": 1.0,
+        "polarity": "neutral"
+      },
+      {
+        "claim_type": "round_terms",
+        "field": "pre_money_valuation",
+        "value": 40000000,
+        "confidence": 0.95,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "round_terms",
+        "field": "raise_amount",
+        "value": 10000000,
+        "confidence": 0.95,
+        "polarity": "neutral",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "traction",
+        "field": "arr",
+        "value": 800000,
+        "confidence": 0.88,
+        "polarity": "supportive",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "traction",
+        "field": "pilot_customers",
+        "value": 8,
+        "confidence": 0.9,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "traction",
+        "field": "enterprise_pipeline",
+        "value": 5000000,
+        "confidence": 0.7,
+        "polarity": "supportive",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "team_quality",
+        "field": "founder_background",
+        "value": "Stanford ML PhD, ex-Google Brain research scientist",
+        "confidence": 0.95,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "team_quality",
+        "field": "publications",
+        "value": "15 peer-reviewed papers, 3000+ citations",
+        "confidence": 0.9,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "technical_moat",
+        "field": "patents_filed",
+        "value": 4,
+        "confidence": 0.95,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "technical_moat",
+        "field": "proprietary_data",
+        "value": "50M labeled industrial sensor readings",
+        "confidence": 0.8,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "differentiation",
+        "field": "benchmark_performance",
+        "value": "3x accuracy vs GPT-4 on industrial anomaly detection",
+        "confidence": 0.75,
+        "polarity": "supportive"
+      },
+      {
+        "claim_type": "market_scope",
+        "field": "tam",
+        "value": 8000000000,
+        "confidence": 0.7,
+        "polarity": "supportive",
+        "unit": "USD"
+      },
+      {
+        "claim_type": "exit_logic",
+        "field": "potential_acquirers",
+        "value": [
+          "Siemens",
+          "Honeywell",
+          "Rockwell Automation",
+          "Microsoft"
+        ],
+        "confidence": 0.65,
+        "polarity": "supportive"
+      }
+    ]
+  }
+}
