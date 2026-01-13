@@ -189,6 +189,20 @@ from .hypothesis import (
     MultiHypothesisEngine,
 )
 
+# Hierarchical Reasoning
+from .hierarchy import (
+    PartitionKey,
+    Partition,
+    PolicyOverride,
+    HierarchicalPolicy,
+    HierarchicalEvaluationResult,
+    HierarchicalLearningConfig,
+    HierarchicalLearningEngine,
+    learn_hierarchical_policy,
+    evaluate_with_hierarchy,
+    summarize_policy,
+)
+
 __all__ = [
     # Results
     "EvalResult",
@@ -303,4 +317,15 @@ __all__ = [
     "HypothesisSetConfig",
     "HypothesisSet",
     "MultiHypothesisEngine",
+    # Hierarchical Reasoning
+    "PartitionKey",
+    "Partition",
+    "PolicyOverride",
+    "HierarchicalPolicy",
+    "HierarchicalEvaluationResult",
+    "HierarchicalLearningConfig",
+    "HierarchicalLearningEngine",
+    "learn_hierarchical_policy",
+    "evaluate_with_hierarchy",
+    "summarize_policy",
 ]
