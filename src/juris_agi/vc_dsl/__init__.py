@@ -203,6 +203,21 @@ from .hierarchy import (
     summarize_policy,
 )
 
+# Uncertainty Quantification
+from .uncertainty import (
+    UncertaintyLevel,
+    UncertaintyReason,
+    EpistemicUncertainty,
+    AleatoricUncertainty,
+    InformationRequest,
+    UncertaintyReport,
+    UncertaintyConfig,
+    UncertaintyAnalyzer,
+    analyze_uncertainty,
+    should_request_more_info,
+    get_top_information_requests,
+)
+
 __all__ = [
     # Results
     "EvalResult",
@@ -328,4 +343,16 @@ __all__ = [
     "learn_hierarchical_policy",
     "evaluate_with_hierarchy",
     "summarize_policy",
+    # Uncertainty Quantification
+    "UncertaintyLevel",
+    "UncertaintyReason",
+    "EpistemicUncertainty",
+    "AleatoricUncertainty",
+    "InformationRequest",
+    "UncertaintyReport",
+    "UncertaintyConfig",
+    "UncertaintyAnalyzer",
+    "analyze_uncertainty",
+    "should_request_more_info",
+    "get_top_information_requests",
 ]
