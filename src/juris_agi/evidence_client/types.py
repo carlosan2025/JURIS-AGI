@@ -39,6 +39,14 @@ class Citation(BaseModel):
     extraction_date: datetime = Field(default_factory=datetime.utcnow)
 
 
+class TimeSeriesPoint(BaseModel):
+    """A single point in a time series."""
+
+    t: str = Field(..., description="Time point (e.g., 'Q1 2024', '2024-01', 'Jan 2024')")
+    value: float = Field(..., description="Value at this time point")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence for this point")
+
+
 class Claim(BaseModel):
     """A structured claim extracted from evidence documents."""
 
@@ -51,6 +59,10 @@ class Claim(BaseModel):
     unit: Optional[str] = Field(None, description="Unit of measurement if applicable")
     as_of_date: Optional[datetime] = Field(None, description="Date the claim value is valid for")
     citations: list[Citation] = Field(default_factory=list, description="Source citations")
+    timeseries: Optional[list[TimeSeriesPoint]] = Field(
+        None,
+        description="Time series data for temporal claims (e.g., quarterly ARR)"
+    )
 
     @property
     def confidence_level(self) -> ConfidenceLevel:
@@ -60,6 +72,11 @@ class Claim(BaseModel):
         elif self.confidence >= 0.5:
             return ConfidenceLevel.MEDIUM
         return ConfidenceLevel.LOW
+
+    @property
+    def has_timeseries(self) -> bool:
+        """Check if this claim has time series data."""
+        return self.timeseries is not None and len(self.timeseries) > 0
 
 
 class ConflictType(str, Enum):

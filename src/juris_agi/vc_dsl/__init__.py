@@ -156,6 +156,24 @@ from .thresholds import (
     DOMAIN_HEURISTICS,
 )
 
+# Time Series
+from .timeseries import (
+    TimeGranularity,
+    TimePoint,
+    TimeSeriesPoint,
+    TimeSeries,
+    TrendResult,
+    TrendConfig,
+    TimeSeriesFeatures,
+    parse_time_point,
+    classify_trend,
+    extract_features,
+    add_timeseries_features_to_context,
+    extract_all_timeseries_features,
+    interpolate_missing,
+    filter_outliers,
+)
+
 __all__ = [
     # Results
     "EvalResult",
@@ -243,4 +261,19 @@ __all__ = [
     "FieldObservations",
     "merge_threshold_traces",
     "DOMAIN_HEURISTICS",
+    # Time Series
+    "TimeGranularity",
+    "TimePoint",
+    "TimeSeriesPoint",
+    "TimeSeries",
+    "TrendResult",
+    "TrendConfig",
+    "TimeSeriesFeatures",
+    "parse_time_point",
+    "classify_trend",
+    "extract_features",
+    "add_timeseries_features_to_context",
+    "extract_all_timeseries_features",
+    "interpolate_missing",
+    "filter_outliers",
 ]

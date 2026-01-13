@@ -315,7 +315,12 @@ class Trend(Predicate):
     """
     Check trend of a field over a time window.
 
-    Requires time-series data in the context.
+    Supports multiple data sources:
+    1. Pre-computed trend stored in context as {field}_trend_{window}
+    2. Time series data in context as {field}_timeseries (list of {t, value} dicts)
+    3. Historical values as {field}_t0, {field}_t1, etc.
+
+    Uses robust trend classification from timeseries module.
     """
 
     field: str
@@ -323,22 +328,68 @@ class Trend(Predicate):
     kind: TrendKind
 
     def evaluate(self, ctx: EvalContext) -> EvalResult:
-        # Look for trend data in context
+        # 1. Look for pre-computed trend data in context
         trend_field = f"{self.field}_trend_{self.window}"
         fv = ctx.get_field(trend_field)
 
-        if not fv.exists:
-            # Try to compute from historical values
-            return self._compute_trend(ctx)
+        if fv.exists:
+            # Check if stored trend matches expected kind
+            if fv.value == self.kind.value:
+                return EvalResult.TRUE
+            return EvalResult.FALSE
 
-        # Check if stored trend matches expected kind
-        if fv.value == self.kind.value:
-            return EvalResult.TRUE
-        return EvalResult.FALSE
+        # 2. Look for time series data
+        ts_field = f"{self.field}_timeseries"
+        ts_fv = ctx.get_field(ts_field)
 
-    def _compute_trend(self, ctx: EvalContext) -> EvalResult:
-        """Compute trend from historical field values."""
-        # Look for historical values like field_t0, field_t1, etc.
+        if ts_fv.exists and isinstance(ts_fv.value, list):
+            return self._compute_from_timeseries(ts_fv.value)
+
+        # 3. Try to compute from historical values (legacy format)
+        return self._compute_from_historical(ctx)
+
+    def _compute_from_timeseries(self, ts_data: list) -> EvalResult:
+        """Compute trend from time series data using robust analysis."""
+        try:
+            from .timeseries import TimeSeries, classify_trend
+
+            # Convert to TimeSeries
+            series = TimeSeries.from_list(
+                field=self.field,
+                data=ts_data,
+                time_key="t",
+                value_key="value",
+            )
+
+            if len(series.points) < 2:
+                return EvalResult.UNKNOWN
+
+            # Classify trend
+            result = classify_trend(series, window=self.window)
+
+            # Check if classified trend matches expected kind
+            if result.kind == self.kind:
+                return EvalResult.TRUE
+            return EvalResult.FALSE
+
+        except (ImportError, Exception):
+            # Fallback to simple analysis
+            return self._simple_trend_from_list(ts_data)
+
+    def _simple_trend_from_list(self, ts_data: list) -> EvalResult:
+        """Simple trend analysis fallback."""
+        values = []
+        for item in ts_data:
+            if isinstance(item, dict) and "value" in item:
+                try:
+                    values.append(float(item["value"]))
+                except (TypeError, ValueError):
+                    pass
+
+        return self._classify_values(values)
+
+    def _compute_from_historical(self, ctx: EvalContext) -> EvalResult:
+        """Compute trend from historical field values (legacy format)."""
         values = []
         for i in range(self.window + 1):
             hist_field = f"{self.field}_t{i}"
@@ -349,10 +400,14 @@ class Trend(Predicate):
                 except (TypeError, ValueError):
                     pass
 
+        return self._classify_values(values)
+
+    def _classify_values(self, values: list) -> EvalResult:
+        """Classify trend from a list of values."""
         if len(values) < 2:
             return EvalResult.UNKNOWN
 
-        # Simple trend detection
+        # Compute deltas
         deltas = [values[i + 1] - values[i] for i in range(len(values) - 1)]
         avg_delta = sum(deltas) / len(deltas)
 
