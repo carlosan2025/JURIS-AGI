@@ -8,11 +8,13 @@ This module provides:
 - Predicate templates with placeholder thresholds
 - Template instantiation with proposed thresholds
 - Search space configuration
+- Integration with Threshold Proposer for bounded search
 """
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Sequence
 
 from .predicates_v2 import (
     Predicate,
@@ -29,6 +31,8 @@ from .predicates_v2 import (
 )
 from .typing import ValueType, TrendKind
 from .evaluation import Decision
+
+logger = logging.getLogger(__name__)
 
 
 class TemplateType(Enum):
@@ -479,3 +483,266 @@ def get_template_by_field(field: str) -> Optional[PredicateTemplate]:
 def get_templates_for_claim_type(claim_type: str) -> list[PredicateTemplate]:
     """Get all templates for a claim type."""
     return [t for t in ALL_TEMPLATES if t.field.startswith(f"{claim_type}.")]
+
+
+# =============================================================================
+# Predicate Synthesizer with Threshold Proposer Integration
+# =============================================================================
+
+
+@dataclass
+class SynthesizerConfig:
+    """Configuration for predicate synthesis."""
+
+    # Maximum predicates to generate per template
+    max_predicates_per_template: int = 12
+
+    # Threshold proposer settings
+    threshold_quantiles: tuple[float, ...] = (0.1, 0.25, 0.5, 0.75, 0.9)
+    use_domain_heuristics: bool = True
+    round_thresholds: bool = True
+
+    # Confidence settings
+    min_confidence: float = 0.7
+
+    # Which template types to synthesize
+    synthesize_ge: bool = True
+    synthesize_le: bool = True
+    synthesize_between: bool = True
+
+
+@dataclass
+class SynthesisTrace:
+    """Trace of predicate synthesis process."""
+
+    template_id: str
+    field: str
+    threshold_count: int
+    predicates_generated: int
+    thresholds_used: list[float] = field(default_factory=list)
+
+
+class PredicateSynthesizer:
+    """
+    Synthesizes predicates from templates using Threshold Proposer.
+
+    Ensures that ge/le/between predicates only use thresholds from
+    the Threshold Proposer, keeping search tractable.
+    """
+
+    def __init__(
+        self,
+        config: Optional[SynthesizerConfig] = None,
+        observed_data: Optional[dict[str, list[float]]] = None,
+    ):
+        """
+        Initialize synthesizer.
+
+        Args:
+            config: Synthesis configuration
+            observed_data: Map from field names to observed values
+        """
+        self.config = config or SynthesizerConfig()
+        self.observed_data = observed_data or {}
+        self._threshold_cache: dict[str, list[float]] = {}
+        self._traces: list[SynthesisTrace] = []
+
+    def _get_thresholds(self, field: str) -> list[float]:
+        """Get thresholds for a field using Threshold Proposer."""
+        if field in self._threshold_cache:
+            return self._threshold_cache[field]
+
+        # Import here to avoid circular imports
+        from .thresholds import (
+            propose_thresholds,
+            ThresholdProposerConfig,
+        )
+
+        observed = self.observed_data.get(field, [])
+
+        proposer_config = ThresholdProposerConfig(
+            max_thresholds=self.config.max_predicates_per_template,
+            quantiles=self.config.threshold_quantiles,
+            use_domain_heuristics=self.config.use_domain_heuristics,
+            round_to_nice=self.config.round_thresholds,
+            min_confidence=0.5,
+            enable_trace=True,
+        )
+
+        thresholds, trace = propose_thresholds(
+            field=field,
+            observed_values=observed,
+            config=proposer_config,
+        )
+
+        if trace:
+            logger.debug(
+                f"Proposed {len(thresholds)} thresholds for {field}: "
+                f"{thresholds[:5]}{'...' if len(thresholds) > 5 else ''}"
+            )
+
+        self._threshold_cache[field] = thresholds
+        return thresholds
+
+    def synthesize_from_template(
+        self,
+        template: PredicateTemplate,
+    ) -> list[Predicate]:
+        """
+        Synthesize predicates from a single template.
+
+        For threshold templates (ge/le/between), uses Threshold Proposer
+        to generate a bounded set of candidates.
+
+        Args:
+            template: Template to synthesize from
+
+        Returns:
+            List of concrete predicates
+        """
+        predicates = []
+        thresholds_used = []
+
+        if template.template_type == TemplateType.EXISTENCE:
+            # Existence predicates don't need thresholds
+            predicates.append(template.instantiate())
+
+        elif template.template_type == TemplateType.EQUALITY:
+            # Generate one predicate per candidate value
+            for value in template.candidate_values:
+                predicates.append(template.instantiate(value=value))
+
+        elif template.template_type == TemplateType.MEMBERSHIP:
+            # Use all candidate values
+            predicates.append(template.instantiate(values=template.candidate_values))
+
+        elif template.template_type == TemplateType.THRESHOLD_GE and self.config.synthesize_ge:
+            # Get thresholds from Threshold Proposer
+            thresholds = self._get_thresholds(template.field)
+            thresholds_used = thresholds
+            for threshold in thresholds:
+                predicates.append(template.instantiate(threshold=threshold))
+
+        elif template.template_type == TemplateType.THRESHOLD_LE and self.config.synthesize_le:
+            # Get thresholds from Threshold Proposer
+            thresholds = self._get_thresholds(template.field)
+            thresholds_used = thresholds
+            for threshold in thresholds:
+                predicates.append(template.instantiate(threshold=threshold))
+
+        elif template.template_type == TemplateType.RANGE and self.config.synthesize_between:
+            # Generate range predicates from threshold pairs
+            thresholds = self._get_thresholds(template.field)
+            thresholds_used = thresholds
+
+            # Generate adjacent pairs
+            for i in range(len(thresholds) - 1):
+                lo = thresholds[i]
+                hi = thresholds[i + 1]
+                predicates.append(template.instantiate(lo=lo, hi=hi))
+
+            # Also generate wider ranges (skip one)
+            for i in range(len(thresholds) - 2):
+                lo = thresholds[i]
+                hi = thresholds[i + 2]
+                predicates.append(template.instantiate(lo=lo, hi=hi))
+
+        elif template.template_type == TemplateType.TREND:
+            # Generate predicates for each window/kind combination
+            for window in template.window_options:
+                for kind in template.trend_kinds:
+                    predicates.append(template.instantiate(window=window, kind=kind))
+
+        # Record trace
+        self._traces.append(SynthesisTrace(
+            template_id=template.template_id,
+            field=template.field,
+            threshold_count=len(thresholds_used),
+            predicates_generated=len(predicates),
+            thresholds_used=thresholds_used,
+        ))
+
+        return predicates
+
+    def synthesize_all(
+        self,
+        templates: Optional[list[PredicateTemplate]] = None,
+        config: Optional[SearchSpaceConfig] = None,
+    ) -> list[Predicate]:
+        """
+        Synthesize predicates from all templates.
+
+        Args:
+            templates: Templates to use (defaults to all matching config)
+            config: Search space config for filtering templates
+
+        Returns:
+            List of all synthesized predicates
+        """
+        if templates is None:
+            if config is None:
+                config = SearchSpaceConfig()
+            templates = config.get_templates()
+
+        all_predicates = []
+        for template in templates:
+            predicates = self.synthesize_from_template(template)
+            all_predicates.extend(predicates)
+
+        logger.info(
+            f"Synthesized {len(all_predicates)} predicates from "
+            f"{len(templates)} templates"
+        )
+
+        return all_predicates
+
+    def get_traces(self) -> list[SynthesisTrace]:
+        """Get synthesis traces for debugging/logging."""
+        return self._traces
+
+    def get_trace_summary(self) -> dict:
+        """Get a summary of synthesis traces."""
+        return {
+            "templates_processed": len(self._traces),
+            "total_predicates": sum(t.predicates_generated for t in self._traces),
+            "total_thresholds": sum(t.threshold_count for t in self._traces),
+            "by_template": {
+                t.template_id: {
+                    "field": t.field,
+                    "thresholds": t.threshold_count,
+                    "predicates": t.predicates_generated,
+                }
+                for t in self._traces
+            },
+        }
+
+    def clear_cache(self):
+        """Clear threshold cache."""
+        self._threshold_cache.clear()
+
+
+def synthesize_predicates(
+    observed_data: Optional[dict[str, list[float]]] = None,
+    config: Optional[SynthesizerConfig] = None,
+    search_config: Optional[SearchSpaceConfig] = None,
+) -> tuple[list[Predicate], dict]:
+    """
+    Convenience function to synthesize predicates.
+
+    Args:
+        observed_data: Map from field names to observed values
+        config: Synthesizer configuration
+        search_config: Search space configuration
+
+    Returns:
+        Tuple of (predicates, trace_summary)
+    """
+    synthesizer = PredicateSynthesizer(
+        config=config,
+        observed_data=observed_data,
+    )
+
+    predicates = synthesizer.synthesize_all(config=search_config)
+    summary = synthesizer.get_trace_summary()
+
+    return predicates, summary

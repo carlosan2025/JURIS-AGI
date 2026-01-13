@@ -132,6 +132,28 @@ from .search_space import (
     TREND_TEMPLATES,
     get_template_by_field,
     get_templates_for_claim_type,
+    # Synthesizer
+    SynthesizerConfig,
+    SynthesisTrace,
+    PredicateSynthesizer,
+    synthesize_predicates,
+)
+
+# Threshold Proposer
+from .thresholds import (
+    ThresholdReason,
+    ThresholdCandidate,
+    ThresholdTrace,
+    ThresholdPrior,
+    ThresholdProposerConfig,
+    propose_thresholds,
+    propose_thresholds_for_template,
+    propose_all_thresholds,
+    get_thresholds_only,
+    default_thresholds_for_field,
+    FieldObservations,
+    merge_threshold_traces,
+    DOMAIN_HEURISTICS,
 )
 
 __all__ = [
@@ -202,4 +224,23 @@ __all__ = [
     "TREND_TEMPLATES",
     "get_template_by_field",
     "get_templates_for_claim_type",
+    # Synthesizer
+    "SynthesizerConfig",
+    "SynthesisTrace",
+    "PredicateSynthesizer",
+    "synthesize_predicates",
+    # Threshold Proposer
+    "ThresholdReason",
+    "ThresholdCandidate",
+    "ThresholdTrace",
+    "ThresholdPrior",
+    "ThresholdProposerConfig",
+    "propose_thresholds",
+    "propose_thresholds_for_template",
+    "propose_all_thresholds",
+    "get_thresholds_only",
+    "default_thresholds_for_field",
+    "FieldObservations",
+    "merge_threshold_traces",
+    "DOMAIN_HEURISTICS",
 ]
